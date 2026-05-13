@@ -1,0 +1,42 @@
+{
+  "name": "NutriMama",
+  "short_name": "NutriMama",
+  "description": "AI-powered women's health from first period to motherhood.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FAF7F2",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "scope": "/",
+  "categories": ["health", "lifestyle", "medical"],
+  "icons": [
+    {
+      "src": "/NutriLogo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cycle tracker",
+      "short_name": "Cycle",
+      "url": "/dashboard?tab=cycle",
+      "description": "Log today's period or symptoms"
+    },
+    {
+      "name": "AI Chat",
+      "short_name": "Chat",
+      "url": "/dashboard/chat",
+      "description": "Ask the NutriMama AI"
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "url": "/dashboard/reports",
+      "description": "Upload a medical report"
+    }
+  ]
+}

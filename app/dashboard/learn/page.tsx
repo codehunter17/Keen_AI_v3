@@ -1,0 +1,76 @@
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { getRecommendedContent } from "@/lib/actions/content";
+
+export const metadata = { title: "Learn · NutriMama" };
+
+export default async function LearnPage() {
+  const s = await auth.api.getSession({ headers: await headers() });
+  if (!s) redirect("/auth/login");
+
+  const items = await getRecommendedContent({ limit: 24 });
+
+  return (
+    <main className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <header className="mb-6">
+        <h1 className="font-heading text-3xl text-primary">Learn</h1>
+        <p className="text-sm text-muted-foreground">
+          Hand-picked, doctor-reviewed articles and videos personalized to your
+          stage of life.
+        </p>
+      </header>
+
+      {items.length === 0 ? (
+        <div className="rounded-2xl bg-card lift p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            We&apos;re curating content for your stage. Check back soon.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((it) => (
+            <a
+              key={it.id}
+              href={`/dashboard/learn/${it.slug}`}
+              className="group rounded-2xl bg-card lift overflow-hidden hover:lift-strong transition-shadow"
+            >
+              {it.thumbnailUrl && (
+                <div className="aspect-video bg-muted overflow-hidden">
+                  <img
+                    src={it.thumbnailUrl}
+                    alt=""
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+              )}
+              <div className="p-4">
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {it.topics.slice(0, 2).map((t) => (
+                    <span key={t} className="chip text-[10px] py-0.5">{t}</span>
+                  ))}
+                  {it.parentalGuidance && (
+                    <span className="chip text-[10px] py-0.5 bg-secondary/20 text-secondary-foreground border-secondary/30">
+                      Parent co-watch
+                    </span>
+                  )}
+                </div>
+                <h2 className="font-heading text-lg text-foreground group-hover:text-primary transition-colors">
+                  {it.title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                  {it.summary}
+                </p>
+                {it.source && (
+                  <p className="mt-2 text-[10px] text-muted-foreground">
+                    Source: {it.source}
+                  </p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </main>
+  );
+}

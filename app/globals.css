@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
+}
+
+/* ─── BRAND IDENTITY ────────────────────────────────────────
+   Distinct from any reference design. Emerald + blush + ivory
+   palette — health, warmth, premium. Generous radius for a
+   modern, "soft architecture" feel.
+   ─────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --background: oklch(0.98 0.008 85);                  /* warm ivory  #FAF7F2 */
+  --foreground: oklch(0.22 0.012 160);                 /* deep ink    #1A1F1D */
+  --card: oklch(1 0 0);                                /* pure white card */
+  --card-foreground: oklch(0.22 0.012 160);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.012 160);
+
+  /* Brand */
+  --primary: oklch(0.40 0.07 160);                     /* emerald     #1F4D3F */
+  --primary-foreground: oklch(0.98 0.008 85);
+
+  --secondary: oklch(0.86 0.05 25);                    /* blush       #F4C5BB */
+  --secondary-foreground: oklch(0.30 0.05 25);
+
+  --accent: oklch(0.93 0.025 160);                     /* mist green for hovers */
+  --accent-foreground: oklch(0.40 0.07 160);
+
+  --gold: oklch(0.78 0.085 80);                        /* warm gold   #C9A76A — Pro tier */
+  --gold-foreground: oklch(0.20 0.02 80);
+
+  /* Muted / chrome */
+  --muted: oklch(0.95 0.012 85);
+  --muted-foreground: oklch(0.45 0.015 160);
+  --border: oklch(0.90 0.012 85);
+  --input: oklch(0.94 0.012 85);
+  --ring: oklch(0.40 0.07 160 / 0.55);
+
+  /* Destructive (cycle/symptom red kept warmer) */
+  --destructive: oklch(0.55 0.18 25);
+  --destructive-foreground: oklch(0.98 0.008 85);
+
+  --radius: 1rem;
+}
+
+.dark {
+  --background: oklch(0.18 0.015 160);                 /* deep forest #14201C */
+  --foreground: oklch(0.96 0.008 85);
+  --card: oklch(0.22 0.015 160);
+  --card-foreground: oklch(0.96 0.008 85);
+  --popover: oklch(0.20 0.015 160);
+  --popover-foreground: oklch(0.96 0.008 85);
+
+  --primary: oklch(0.72 0.10 160);                     /* brighter emerald for dark */
+  --primary-foreground: oklch(0.18 0.015 160);
+
+  --secondary: oklch(0.55 0.06 25);                    /* deeper blush */
+  --secondary-foreground: oklch(0.96 0.008 85);
+
+  --accent: oklch(0.30 0.025 160);
+  --accent-foreground: oklch(0.96 0.008 85);
+
+  --gold: oklch(0.82 0.10 80);
+  --gold-foreground: oklch(0.18 0.015 160);
+
+  --muted: oklch(0.25 0.012 160);
+  --muted-foreground: oklch(0.78 0.012 85);
+  --border: oklch(0.30 0.012 160);
+  --input: oklch(0.28 0.012 160);
+  --ring: oklch(0.72 0.10 160 / 0.55);
+
+  --destructive: oklch(0.62 0.18 25);
+  --destructive-foreground: oklch(0.96 0.008 85);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01";
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-foreground tracking-tight;
+  }
+  h1 { letter-spacing: -0.025em; }
+}
+
+@layer utilities {
+  /* Premium gradient surface for hero / Pro tier cards */
+  .surface-premium {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--primary) 8%, var(--background)) 0%,
+      color-mix(in oklab, var(--secondary) 12%, var(--background)) 100%
+    );
+  }
+  .surface-gold {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--gold) 18%, var(--background)) 0%,
+      color-mix(in oklab, var(--gold) 6%, var(--background)) 100%
+    );
+  }
+
+  /* Soft shadow used on cards — distinctive lift, not generic shadcn */
+  .lift {
+    box-shadow:
+      0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent),
+      0 8px 24px -8px color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+  .lift-strong {
+    box-shadow:
+      0 2px 4px color-mix(in oklab, var(--foreground) 8%, transparent),
+      0 18px 40px -12px color-mix(in oklab, var(--primary) 20%, transparent);
+  }
+
+  /* Pill chip used everywhere (cycle phase, life-stage badges).
+     Use `chip` for default look. Compose with `chip-active` /
+     `chip-secondary-active` for selected states — these win over the
+     default bg/border because of !important. */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium transition-colors;
+  }
+  .chip-active {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border-color: var(--primary) !important;
+  }
+  .chip-secondary-active {
+    background-color: var(--secondary) !important;
+    color: var(--secondary-foreground) !important;
+    border-color: var(--secondary) !important;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border), transparent 50%);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+}
+
+@media print {
+  .no-print, [no-print] { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
+  body, html, main { height: auto !important; overflow: visible !important; background: white !important; display: block !important; margin: 0 !important; padding: 0 !important; }
+  .chat-print-content { height: auto !important; overflow: visible !important; display: block !important; padding: 0 !important; margin-top: 0 !important; }
+  .flex.h-screen, .flex.h-full, .h-full { height: auto !important; display: block !important; overflow: visible !important; }
+  .flex.w-full.group { page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 1.5rem !important; display: block !important; }
+  .bg-primary { background: #f9f9f9 !important; border: 1px solid #ddd !important; }
+  .print-header { display: flex !important; border-bottom: 2px solid #333 !important; margin-bottom: 2rem !important; padding-bottom: 1rem !important; }
+}

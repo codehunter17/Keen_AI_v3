@@ -1,0 +1,560 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgvector(map: "vector")]
+}
+
+// ─────────────────────────────────────────────────────────────
+// LIFECYCLE ENUMS — keep as strings for Prisma simplicity, but
+// document the canonical values here so app code stays consistent.
+// LifeStage:   CHILD_4_7 | CHILD_8_10 | TEEN_11_13 | TEEN_14_17 |
+//              ADULT_MENSTRUATING | TRYING_TO_CONCEIVE | PREGNANT |
+//              POSTPARTUM | PERIMENOPAUSE | MENOPAUSE
+// CycleStage:  PRE_MENARCHE | MENSTRUATING | PCOS_SUSPECTED | PCOS_DIAGNOSED
+// SubTier:     FREE | CARE_49 | PRO_99
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  // ── Identity / lifecycle ─────────────────────────────────
+  dob            DateTime?  // age computed from this — single source of truth
+  age            Int?       // cached for query speed; recomputed nightly
+  lifeStage      String?    // see LifeStage enum doc above
+  cycleStage     String?    // see CycleStage doc above
+  countryCode    String?    @default("IN")
+  languagePref   String?    @default("en") // en | hi | ta | te | bn | mr
+
+  // ── Pregnancy fields ─────────────────────────────────────
+  pregnancyStage String?    // PRE_PREGNANT | PREGNANT | POST_PARTUM
+  dueDate        DateTime?
+  pregnancyWeek  Int?
+  dietaryPref    String?    // VEGETARIAN | VEGAN | NON_VEG
+  regionalPref   String?    // INDIAN | WESTERN | ASIAN
+
+  // ── Vitals (used by ML risk model) ───────────────────────
+  height               Float?
+  weight               Float?
+  previousPregnancies  Int?
+  supplements          String?
+  friedFoods           String?
+  sugaryFoods          String?
+  waterIntake          Float?
+  useFortifiedFood     String?
+  supplementFrequency  String?
+  avoidingFoods        String?
+  symptoms             String?
+  smokeAlcohol         String?
+  physicalActivity     String?
+  cleanWater           String?
+  foodAccessDifficulty String?
+  sleepDuration        Float?
+  movementDuration     Int?
+  mood                 String?
+
+  // ── Subscription ─────────────────────────────────────────
+  tier                String   @default("FREE")    // FREE | CARE_49 | PRO_99
+  tierExpiresAt       DateTime?
+  razorpayCustomerId  String?
+  stripeCustomerId    String?
+
+  // ── DPDP consents (audit trail lives in ConsentRecord) ───
+  termsAcceptedAt        DateTime?
+  privacyAcceptedAt      DateTime?
+  medicalDisclaimerAt    DateTime?
+  // Allow anonymized data to be used for nightly model retraining
+  allowModelTraining     Boolean   @default(false)
+  allowModelTrainingAt   DateTime?
+
+  // ── Better Auth required relations ───────────────────────
+  sessions Session[]
+  accounts Account[]
+
+  // ── App relations ────────────────────────────────────────
+  dailyLogs        DailyLog[]
+  nutritionPlans   NutritionPlan[]
+  chatSessions     ChatSession[]
+  reports          Report[]
+  memories         Memory[]
+  calendarEvents   CalendarEvent[]
+  cycleLogs        CycleLog[]
+  symptomLogs      SymptomLog[]
+  contentViews     ContentView[]
+  subscriptions    Subscription[]
+  consentRecords   ConsentRecord[]
+  dependents       DependentProfile[] @relation("ParentDependents")
+  emergencyContacts EmergencyContact[]
+  riskPredictions  RiskPrediction[]
+  notifications    Notification[]
+  streaks          Streak[]
+  badges           Badge[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  DPDP-COMPLIANT MINOR ("DEPENDENT") PROFILES
+//  - Never has its own login. Always lives under a parent User.
+//  - Verifiable parental consent stored in ConsentRecord.
+//  - No third-party analytics / no ads / no LLM-freeform output.
+// ═════════════════════════════════════════════════════════════
+model DependentProfile {
+  id             String   @id @default(uuid())
+  parentId       String
+  parent         User     @relation("ParentDependents", fields: [parentId], references: [id], onDelete: Cascade)
+
+  firstName      String
+  dob            DateTime
+  relationship   String   // DAUGHTER | NIECE | SISTER | OTHER
+  ageBand        String   // BAND_4_7 | BAND_8_10 | BAND_11_13 | BAND_14_17 (recomputed nightly)
+  hasMenarche    Boolean  @default(false)
+  menarcheDate   DateTime?
+  cycleTrackingEnabled Boolean @default(false) // parent toggles this on after menarche
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime? // soft delete; hard-purge job runs after 7 days
+
+  cycleLogs      CycleLog[]
+  contentViews   ContentView[]
+  consentRecord  ConsentRecord? @relation("DependentConsent")
+
+  @@index([parentId])
+  @@map("dependent_profile")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  CONSENT AUDIT LOG  (DPDP Section 6 + 9 evidence trail)
+// ═════════════════════════════════════════════════════════════
+model ConsentRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // If this consent is for a dependent profile, link it
+  dependentId     String?  @unique
+  dependent       DependentProfile? @relation("DependentConsent", fields: [dependentId], references: [id], onDelete: Cascade)
+
+  consentType     String   // TERMS | PRIVACY | MEDICAL_DISCLAIMER | DATA_TRAINING |
+                           // PARENTAL_VERIFY | LOCATION | NOTIFICATIONS | EMERGENCY_SHARE
+  granted         Boolean
+  method          String   // CHECKBOX | RAZORPAY_RE1 | DIGILOCKER | EMAIL_OTP | SMS_OTP
+  evidenceRef     String?  // Razorpay payment_id, OTP hash, etc. NEVER raw Aadhaar/PAN.
+
+  ipAddress       String?
+  userAgent       String?
+  policyVersion   String   // e.g. "privacy-2026-05-06" — never edit, append new
+
+  createdAt       DateTime @default(now())
+  revokedAt       DateTime?
+
+  @@index([userId, consentType])
+  @@map("consent_record")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  CYCLE / PERIOD TRACKING  (used by adults AND consented minors)
+// ═════════════════════════════════════════════════════════════
+model CycleLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // OR for minor profile
+  dependentId   String?
+  dependent     DependentProfile? @relation(fields: [dependentId], references: [id], onDelete: Cascade)
+
+  startDate     DateTime
+  endDate       DateTime?
+  flow          String?   // LIGHT | MEDIUM | HEAVY | SPOTTING
+  pain          Int?      // 0..10
+  symptoms      Json?     // ["cramps","mood_swings","acne",...]
+  notes         String?
+  predicted     Boolean   @default(false)  // true if generated by ML, false if user-logged
+  createdAt     DateTime  @default(now())
+
+  @@index([userId, startDate])
+  @@index([dependentId, startDate])
+  @@map("cycle_log")
+}
+
+// Rich symptom log (separate from cycle to support PCOS screening + general health)
+model SymptomLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  category    String   // PCOS | PREGNANCY | GENERAL | MENTAL_HEALTH
+  data        Json     // flexible: { acne: true, hairLoss: false, weightGain: 3, ... }
+  aiInsight   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, date])
+  @@map("symptom_log")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  CURATED CONTENT LIBRARY (videos / articles)
+//  - Hand-curated. Never LLM-generated freeform for minors.
+//  - AI only RECOMMENDS which row to show next.
+// ═════════════════════════════════════════════════════════════
+model ContentItem {
+  id             String   @id @default(uuid())
+  slug           String   @unique
+  title          String
+  summary        String
+  body           String?  // Markdown article body (null for video-only)
+  videoUrl       String?
+  thumbnailUrl   String?
+  durationSec    Int?
+  language       String   @default("en")
+
+  // Targeting
+  ageBands       String[] // ["BAND_4_7","BAND_8_10",...] — empty = all
+  lifeStages     String[] // ["CHILD_8_10","ADULT_MENSTRUATING",...]
+  topics         String[] // ["safety","period","pcos","pregnancy","nutrition","mentalhealth"]
+
+  // Safety
+  parentalGuidance Boolean @default(false) // require parent to be present/co-watch
+  reviewedBy       String? // name of medical/child-safety reviewer
+  reviewedAt       DateTime?
+  source           String? // e.g. "Menstrupedia", "WHO", "ICMR"
+  sourceUrl        String?
+
+  views          ContentView[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([language, ageBands])
+  @@map("content_item")
+}
+
+model ContentView {
+  id            String   @id @default(uuid())
+  contentId     String
+  content       ContentItem @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dependentId   String?
+  dependent     DependentProfile? @relation(fields: [dependentId], references: [id], onDelete: Cascade)
+  watchedSec    Int?
+  completed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([dependentId])
+  @@map("content_view")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  SUBSCRIPTIONS  (Razorpay primary, Stripe optional)
+// ═════════════════════════════════════════════════════════════
+model Subscription {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier                String   // CARE_49 | PRO_99
+  status              String   // ACTIVE | PAST_DUE | CANCELED | EXPIRED
+  provider            String   // RAZORPAY | STRIPE
+  providerSubId       String   // Razorpay subscription_id or Stripe sub id
+
+  amountInPaise       Int      // 4900 or 9900
+  currency            String   @default("INR")
+  startedAt           DateTime
+  currentPeriodEnd    DateTime
+  canceledAt          DateTime?
+  couponCode          String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId, status])
+  @@map("subscription")
+}
+
+model Coupon {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  description   String
+  percentOff    Int?     // 0..100
+  amountOffPaise Int?
+  validFrom     DateTime
+  validUntil    DateTime
+  maxRedemptions Int?
+  redeemedCount Int      @default(0)
+  appliesToTier String?  // CARE_49 | PRO_99 | null = both
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("coupon")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  ML / TRAINING PIPELINE  ("AI gets smarter daily" — done legally)
+//  - Each prediction is logged.
+//  - Nightly job picks rows where consentToTrain=true,
+//    anonymizes them, exports to ai/ FastAPI for retraining.
+// ═════════════════════════════════════════════════════════════
+model RiskPrediction {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelVersion    String
+  inputFeatures   Json     // exact feature vector sent to CatBoost
+  riskLevel       String   // LOW | MEDIUM | HIGH
+  confidence      Float
+  rawPrediction   Int
+  // Outcome label (filled in later, e.g. user reported diagnosis): used as training signal
+  outcomeLabel    String?
+  outcomeAt       DateTime?
+  consentToTrain  Boolean  @default(false) // mirrors User.allowModelTraining at write time
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([consentToTrain, outcomeLabel])
+  @@map("risk_prediction")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  EMERGENCY / SAFETY
+// ═════════════════════════════════════════════════════════════
+model EmergencyContact {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  relation  String   // PARTNER | PARENT | DOCTOR | FRIEND
+  priority  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@map("emergency_contact")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  EXISTING APP MODELS (kept, lightly extended)
+// ═════════════════════════════════════════════════════════════
+model DailyLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime @default(now())
+  meals        Json
+  symptoms     Json
+  waterGlasses Int
+  otherFluids  Json?
+  activity     String?
+  mood         String?
+  createdAt    DateTime @default(now())
+
+  @@map("daily_log")
+}
+
+model NutritionPlan {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekNumber        Int
+  planData          Json
+  generatedAt       DateTime @default(now())
+  lastRegeneratedAt DateTime @default(now())
+
+  @@map("nutrition_plan")
+}
+
+model ChatSession {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+  memories  Memory[]
+
+  @@map("chat_session")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  // Safety pipeline outputs (logged for audit)
+  safetyFlag    String? // EMERGENCY | SELF_HARM | OUT_OF_SCOPE | OK
+  containsPii   Boolean @default(false)
+  createdAt DateTime    @default(now())
+
+  @@map("chat_message")
+}
+
+model Report {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName   String
+  fileUrl    String
+  reportType String
+  reportDate DateTime
+  notes      String?
+  aiAnalysis String?
+  analyzedAt DateTime?
+  // Structured extraction so we can use it for RAG + ML
+  extracted  Json?     // { hemoglobin: 11.2, glucose: 92, ... }
+  flagged    Json?     // [{ field:"hemoglobin", value:9.1, range:"11-15", severity:"medium" }]
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("report")
+}
+
+model Memory {
+  id        String                      @id @default(uuid())
+  content   String
+  // Tagging memories so RAG can filter by namespace
+  kind      String   @default("FACT")   // FACT | REPORT | PREDICTION | PREFERENCE | SYMPTOM
+  userId    String
+  user      User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?
+  session   ChatSession?                @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  embedding Unsupported("vector(384)")?
+  createdAt DateTime                    @default(now())
+
+  @@index([userId])
+  @@index([userId, kind])
+  @@map("memory")
+}
+
+model CalendarEvent {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  date       DateTime
+  timeString String
+  location   String?
+  // Auto-generated event types
+  kind       String   @default("CUSTOM") // CUSTOM | APPOINTMENT | PERIOD_PREDICTED | OVULATION | DUE_DATE | MEDICATION
+  createdAt  DateTime @default(now())
+
+  @@index([userId, date])
+  @@map("calendar_event")
+}
+
+// ═════════════════════════════════════════════════════════════
+//  ENGAGEMENT (streaks, notifications)  — daily-use loop
+// ═════════════════════════════════════════════════════════════
+model Streak {
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Generic activity streak (any logged action)
+  currentDays              Int      @default(0)
+  longestDays              Int      @default(0)
+  lastCheckIn              DateTime?
+  // Nutrition-goal streak (only days when ICMR daily targets were met)
+  nutritionCurrentDays     Int      @default(0)
+  nutritionLongestDays     Int      @default(0)
+  nutritionLastHit         DateTime?
+  updatedAt                DateTime @updatedAt
+
+  @@map("streak")
+}
+
+// Achievement badges. Awarded once, persisted across devices.
+model Badge {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String   // matches a key in lib/badges.ts catalogue
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("badge")
+}
+
+// Idempotency log for webhook events. Razorpay can deliver the same event
+// multiple times — we look up event_id here before processing.
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  provider    String   // RAZORPAY | STRIPE
+  eventId     String   // provider's event id, unique
+  eventType   String
+  payload     Json?
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@map("webhook_event")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       String   // CYCLE_REMINDER | NUTRITION_TIP | REPORT_READY | APPOINTMENT | SAFETY_ALERT
+  title      String
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("notification")
+}
