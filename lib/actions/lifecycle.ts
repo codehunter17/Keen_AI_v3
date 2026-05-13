@@ -206,6 +206,41 @@ export async function acceptConsents(
   return { ok: true } as const;
 }
 
+// ─── Toggle: anonymized data for AI training (DPDP § 7) ──────
+// Lets the user withdraw or re-grant the model-training consent
+// from Settings. Audit row written each time for DPDP compliance.
+export async function setAllowModelTraining(granted: boolean) {
+  const session = await requireSession();
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const ua = h.get("user-agent") ?? null;
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        allowModelTraining: granted,
+        allowModelTrainingAt: granted ? now : null,
+      },
+    }),
+    prisma.consentRecord.create({
+      data: {
+        userId: session.user.id,
+        consentType: "DATA_TRAINING",
+        granted,
+        method: "TOGGLE",
+        policyVersion: PRIVACY_POLICY_VERSION,
+        ipAddress: ip,
+        userAgent: ua,
+        revokedAt: granted ? null : now,
+      },
+    }),
+  ]);
+
+  return { ok: true } as const;
+}
+
 // ─── Right-to-erasure (DPDP § 12) ────────────────────────────
 // Soft-delete now, hard-purge cron job sweeps after 7 days.
 export async function requestAccountDeletion(reason?: string) {

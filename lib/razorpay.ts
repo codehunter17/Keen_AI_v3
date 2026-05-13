@@ -16,6 +16,19 @@ type RzpFetch = (path: string, init?: RequestInit) => Promise<Response>;
 const KEY_ID = process.env.RAZORPAY_KEY_ID ?? "";
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "";
 
+// One-shot startup warnings. Surface missing config loudly so it's spotted
+// during dev/deploy rather than at the moment of a paying user's webhook.
+if (typeof process !== "undefined" && !process.env.RAZORPAY_KEY_ID) {
+  console.warn(
+    "[razorpay] RAZORPAY_KEY_ID is not set — checkout will fail. Set it in your environment.",
+  );
+}
+if (typeof process !== "undefined" && !process.env.RAZORPAY_WEBHOOK_SECRET) {
+  console.warn(
+    "[razorpay] RAZORPAY_WEBHOOK_SECRET is not set — initial upgrades still work via client-side signature, but monthly auto-renewals will not be processed. Set it once webhooks are registered in the Razorpay dashboard.",
+  );
+}
+
 function authHeader(): string {
   return "Basic " + Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64");
 }
@@ -50,7 +63,8 @@ export async function createParentalConsentOrder(opts: {
     body: JSON.stringify({
       amount: 100, // 100 paise = ₹1
       currency: "INR",
-      receipt: `pc_${opts.parentUserId}_${Date.now()}`,
+      // Razorpay caps `receipt` at 40 chars. UUID alone is 36, so we slice it.
+      receipt: `pc_${opts.parentUserId.slice(0, 8)}_${Date.now()}`,
       notes: {
         purpose: "PARENTAL_CONSENT",
         parent: opts.parentUserId,
@@ -90,7 +104,8 @@ export async function createSubscriptionOrder(opts: {
     body: JSON.stringify({
       amount: opts.amountInPaise,
       currency: "INR",
-      receipt: `sub_${opts.userId}_${Date.now()}`,
+      // Razorpay caps `receipt` at 40 chars. UUID alone is 36, so we slice it.
+      receipt: `sub_${opts.userId.slice(0, 8)}_${Date.now()}`,
       notes: { purpose: "SUBSCRIPTION", user: opts.userId, ...opts.notes },
     }),
   });

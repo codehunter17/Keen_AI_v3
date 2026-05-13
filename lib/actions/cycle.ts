@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { addDays, differenceInCalendarDays } from "date-fns";
+import { tierAllows, type Tier } from "@/lib/tiers";
 
 async function requireSessionUser() {
   const s = await auth.api.getSession({ headers: await headers() });
@@ -182,6 +183,18 @@ const pcosSchema = z.object({
 
 export async function submitPcosScreen(input: z.infer<typeof pcosSchema>) {
   const s = await requireSessionUser();
+  // Tier gate: PCOS screening is Care/Pro/staff only.
+  const u = await prisma.user.findUnique({
+    where: { id: s.user.id },
+    select: { tier: true, isStaff: true },
+  });
+  if (!u) throw new Error("USER_NOT_FOUND");
+  const tier = (u.tier as Tier) || "FREE";
+  if (!tierAllows({ tier, isStaff: u.isStaff }, "pcosScreening")) {
+    throw new Error(
+      "PCOS screening is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    );
+  }
   const data = pcosSchema.parse(input);
 
   // Each "yes" = 1. Score 4+ → suggested clinician follow-up.

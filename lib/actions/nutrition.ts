@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { runPredictionAndStoreFact } from "./predict";
+import { tierAllows, tierLimit, type Tier } from "@/lib/tiers";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 export async function getNutritionPlan() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -12,6 +14,30 @@ export async function getNutritionPlan() {
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) throw new Error("User not found");
+
+  // Tier gate: Free has no meal plans; Care has 4/month; Pro & staff unlimited.
+  const tier = (user.tier as Tier) || "FREE";
+  const ident = { tier, isStaff: user.isStaff ?? false };
+  if (!tierAllows(ident, "mealPlans")) {
+    throw new Error(
+      "Personalized meal plans are a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    );
+  }
+  const monthlyLimit = tierLimit(ident, "nutritionPlanPerMonth");
+  if (monthlyLimit !== Infinity) {
+    const now = new Date();
+    const used = await prisma.nutritionPlan.count({
+      where: {
+        userId: user.id,
+        generatedAt: { gte: startOfMonth(now), lte: endOfMonth(now) },
+      },
+    });
+    if (used >= monthlyLimit) {
+      throw new Error(
+        `You've used your ${monthlyLimit} meal plans for this month. Upgrade to Pro for unlimited — visit /pricing.`,
+      );
+    }
+  }
 
   const weekNumber = user.pregnancyWeek || 1;
 

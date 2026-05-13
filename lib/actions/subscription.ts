@@ -183,10 +183,13 @@ export async function redeemOwnerCode(input: z.infer<typeof redeemSchema>) {
     return { ok: false as const, error: "Invalid code." };
   }
 
+  // Owner code redemption grants Pro + the staff bypass flag. Staff are
+  // exempt from chat/day caps and feature gates entirely — meant for the
+  // founder, devs, and invited beta testers.
   const expires = addMonths(new Date(), 12);
   await prisma.user.update({
     where: { id: user.id },
-    data: { tier: "PRO_99", tierExpiresAt: expires },
+    data: { tier: "PRO_99", tierExpiresAt: expires, isStaff: true },
   });
 
   return { ok: true as const, tier: "PRO_99" as Tier, expires };

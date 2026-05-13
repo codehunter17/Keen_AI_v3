@@ -23,19 +23,38 @@ export default function PrivacyPage() {
       </p>
 
       <h2>1. The data we collect</h2>
+      <p>
+        We collect the <strong>minimum</strong> needed to run the Service. We
+        never sell data, never share it with advertisers, and never use your
+        identity for AI training or analytics (see section 3a).
+      </p>
       <ul>
         <li>
-          <strong>Account data:</strong> name, email, date of birth, language
-          preference, and (if you choose) phone number.
+          <strong>Login data (account record only):</strong> your email and a
+          display name. Email is required so you can sign in and recover your
+          account. The display name is shown only to you in your own
+          dashboard. These two fields live in a separate, access-controlled
+          account record and are <strong>never</strong> attached to your chats,
+          logs, reports, AI training data, or analytics. If you sign in with
+          Google, we receive only your email and name — no contact list, photos,
+          or anything else from your Google account.
         </li>
         <li>
-          <strong>Health data you provide:</strong> menstrual cycle, symptoms,
-          pregnancy details, medical reports you upload, vitals, dietary
-          preferences, mood, sleep, and other inputs you log.
+          <strong>Health data you provide (stored under a random account ID,
+          not your name):</strong> menstrual cycle, symptoms, pregnancy details,
+          medical reports you upload, vitals, dietary preferences, mood, sleep,
+          and other inputs you log. None of this is keyed to your real-world
+          identity — see section 3a for how this isolation works.
+        </li>
+        <li>
+          <strong>Date of birth &amp; language preference:</strong> kept on the
+          account record so we can confirm you are 18+ and show the app in your
+          language. Not used for marketing, profiling, or training.
         </li>
         <li>
           <strong>Device data:</strong> IP address, user-agent, app version, and
           basic usage telemetry needed to keep the Service working and secure.
+          Retained for 30 days and then purged.
         </li>
         <li>
           <strong>Payment data:</strong> processed by Razorpay (and optionally
@@ -43,6 +62,13 @@ export default function PrivacyPage() {
           masked reference and the payment status.
         </li>
       </ul>
+      <p>
+        <strong>What we don&apos;t collect:</strong> we don&apos;t ask for
+        Aadhaar, PAN, ABHA/Health ID, voter ID, bank account numbers, contacts,
+        location, biometrics, or social-media profiles. If you accidentally
+        type any of these into chat, our PHI scrubber strips them before they
+        ever reach an AI provider.
+      </p>
 
       <h2>2. How we use it</h2>
       <ul>
@@ -65,6 +91,45 @@ export default function PrivacyPage() {
         and reports are sent to Google&apos;s servers in encrypted form to
         produce a response and are not retained beyond Google&apos;s standard
         operational windows.
+      </p>
+
+      <h2>3a. Pseudonymisation &mdash; how your identity is kept separate</h2>
+      <p>
+        We treat your <strong>name and email as account-only data</strong>.
+        They live in a single, access-controlled <em>account record</em> and
+        are never attached to anything used for AI features, analytics, or
+        model training.
+      </p>
+      <ul>
+        <li>
+          Everything you log &mdash; chats, symptoms, cycle entries, reports,
+          meals, daily logs &mdash; is keyed to a random <strong>account ID</strong>
+          (a UUID). That ID is meaningless on its own and cannot be reversed
+          back to your name or email without our access-controlled join.
+        </li>
+        <li>
+          Before any message is sent to a third-party AI provider, our PHI
+          scrubber strips Aadhaar, PAN, Indian mobile numbers, email addresses,
+          ABHA / Health ID, voter ID, and bank account numbers. The
+          provider sees redacted text plus the random account ID, never your
+          real-world identity.
+        </li>
+        <li>
+          If you opt in to anonymised model training (Settings &rarr; Privacy),
+          only the pseudonymous, PHI-scrubbed records are eligible. Names,
+          emails, raw uploaded reports, and payment details are categorically
+          excluded from any training pipeline.
+        </li>
+        <li>
+          Cryptographic hashes are used where reversible mapping isn&apos;t
+          needed (e.g. abuse-prevention dedupes), so even our internal team
+          sees an opaque value rather than a recognisable identity.
+        </li>
+      </ul>
+      <p>
+        In short: <strong>your identity and your health data live in separate
+        places</strong>. The only way to join them is through an authenticated,
+        audited query by you or by us answering a DPDP request from you.
       </p>
       <p>
         <strong>Important:</strong> NutriMama is a wellness companion. It is{" "}

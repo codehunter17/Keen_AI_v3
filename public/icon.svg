@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NutriMama">
+  <!--
+    NutriMama app icon — "The Bloom".
+
+    A single petal/drop shape, tilted, filled with a warm Indian-textile
+    gradient: deep maroon at the apex → coral → warm gold at the base.
+    Sits on a cream-saffron paper-like background.
+
+    Concept brief:
+      • Petal     = growth, femininity, opening, life
+      • Maroon-to-gold gradient = saree borders, sindoor, mehndi —
+        unmistakably Indian without being political/religious
+      • Cream background = paper, palmistry, traditional knowledge
+      • The tilt makes it feel like it's blooming, not stamped
+
+    Vector-only, ~1.6KB. Scales perfectly 24px → 1024px.
+    Maskable-safe: the petal sits inside the 80% safe zone so iOS/Android
+    rounded-square masks won't crop the silhouette.
+  -->
+
+  <defs>
+    <!-- Paper-warm cream background -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf7e8"/>
+      <stop offset="100%" stop-color="#f0e2c0"/>
+    </linearGradient>
+
+    <!-- Petal gradient: deep maroon → coral → warm gold -->
+    <linearGradient id="petal" x1="20%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%"   stop-color="#6b1f33"/>
+      <stop offset="30%"  stop-color="#a8364b"/>
+      <stop offset="60%"  stop-color="#d96e4a"/>
+      <stop offset="85%"  stop-color="#e8b25e"/>
+      <stop offset="100%" stop-color="#f0d188"/>
+    </linearGradient>
+
+    <!-- Inner specular — gives the petal a polished, jewel-like quality -->
+    <radialGradient id="specular" cx="32%" cy="22%" r="38%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft shadow under the petal — anchors it on the cream -->
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6b1f33" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#6b1f33" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- The petal silhouette: pointed apex at top, rounded base -->
+    <path id="petalShape" d="
+      M 256 60
+      C 380 100 392 240 384 320
+      C 376 408 320 456 256 456
+      C 192 456 136 408 128 320
+      C 120 240 132 100 256 60
+      Z
+    "/>
+  </defs>
+
+  <!-- 1. Cream paper background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- 2. Tilted bloom — slight -12° rotation so it feels organic, not stamped -->
+  <g transform="rotate(-12 256 256)">
+    <!-- Soft drop shadow below -->
+    <ellipse cx="256" cy="470" rx="110" ry="14" fill="url(#shadow)"/>
+
+    <!-- Petal body with the warm gradient -->
+    <use href="#petalShape" fill="url(#petal)"/>
+
+    <!-- Specular highlight overlay — same shape, lighter top-left glow -->
+    <use href="#petalShape" fill="url(#specular)"/>
+
+    <!-- A whisper of inner shading along the lower-right edge to give volume -->
+    <path d="
+      M 384 320
+      C 376 408 320 456 256 456
+      C 240 456 220 444 210 432
+    " fill="none" stroke="#6b1f33" stroke-opacity="0.18" stroke-width="3"
+       stroke-linecap="round"/>
+  </g>
+
+  <!-- 3. Tiny gold seed/pollen dot at the petal's heart — the brand's "today" -->
+  <circle cx="244" cy="232" r="9" fill="#f4d68a" stroke="#a8364b" stroke-width="1.5" opacity="0.85"/>
+</svg>

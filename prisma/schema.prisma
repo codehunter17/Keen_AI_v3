@@ -67,6 +67,10 @@ model User {
   tierExpiresAt       DateTime?
   razorpayCustomerId  String?
   stripeCustomerId    String?
+  // Founders, devs, and ops staff. Bypasses ALL tier limits (chat/day,
+  // reports/month, feature gates). Set true on owner-code redemption and
+  // manually for invited team members. Never settable from user input.
+  isStaff             Boolean  @default(false)
 
   // ── DPDP consents (audit trail lives in ConsentRecord) ───
   termsAcceptedAt        DateTime?

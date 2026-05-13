@@ -26,6 +26,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import Link from "next/link";
+import { pickThreeChatStarters } from "@/lib/daily";
 
 const thinkingMessages = [
   "Analyzing your symptoms with care...",
@@ -608,25 +609,19 @@ export default function ChatPage() {
                 </form>
               </div>
 
-              {/* Example Question Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                {[
-                  { q: "Healthy meal plan for 2nd trimester", icon: "🥗" },
-                  { q: "How to manage morning fatigue?", icon: "⚡" },
-                  { q: "Safe exercises for this week", icon: "🧘" },
-                  { q: "Top 5 nutrients I need right now", icon: "✨" },
-                ].map((item) => (
+              {/* Suggested starters — rotate daily so the first prompt
+                  doesn't feel canned across sessions */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
+                {pickThreeChatStarters().map((item) => (
                   <button
-                    key={item.q}
-                    onClick={() => handleSend(item.q)}
+                    key={item.en}
+                    onClick={() => handleSend(item.en)}
                     disabled={isStreaming || isCreatingSession}
-                    className="flex items-center space-x-2 p-3 md:p-5 bg-card/40 border border-border rounded-2xl text-left hover:bg-card hover:border-primary/30 hover:shadow-lg transition-all group disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 p-4 bg-card/40 border border-border rounded-2xl text-left hover:bg-card hover:border-primary/30 hover:shadow-lg transition-all group disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
                   >
-                    <span className="text-lg md:text-2xl group-hover:scale-125 transition-transform">
-                      {item.icon}
-                    </span>
-                    <span className="text-sm md:text-xl font-bold text-foreground/80">
-                      {item.q}
+                    <Sparkles className="w-4 h-4 text-primary shrink-0 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm md:text-base font-medium text-foreground/85 leading-snug">
+                      {item.en}
                     </span>
                   </button>
                 ))}

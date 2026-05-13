@@ -11,11 +11,9 @@ import {
   MoreVertical,
   ChevronRight,
   MessageCircle,
-  Smile,
   Plus,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "motion/react";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -23,6 +21,26 @@ import { useEffect, useState } from "react";
 import { deleteCalendarEvent, type CalendarEvent } from "@/lib/actions/calendar";
 import { CreateEventModal } from "@/components/calendar/create-event-modal";
 import { Loader } from "@/components/ui/loader";
+import { type Tier } from "@/lib/tiers";
+import { pickDailyTip } from "@/lib/daily";
+
+const TIER_BADGE: Record<Tier, { label: string; className: string }> = {
+  FREE: {
+    label: "Free",
+    className:
+      "text-muted-foreground bg-muted border-border",
+  },
+  CARE_49: {
+    label: "Care",
+    className:
+      "text-white bg-primary border-primary shadow-sm",
+  },
+  PRO_99: {
+    label: "Pro",
+    className:
+      "text-white bg-gradient-to-r from-primary to-emerald-600 border-primary shadow-sm",
+  },
+};
 
 export default function OverviewClient() {
   const { data: session, isPending: sessionLoading } = useSession();
@@ -38,7 +56,9 @@ export default function OverviewClient() {
   useEffect(() => {
     if (!sessionLoading && !session) {
       router.push("/auth/sign-in");
-    } else if (!isLoading && data && !data.user?.pregnancyStage) {
+    } else if (!isLoading && data && !data.user?.lifeStage) {
+      // Gate onboarding on lifeStage (set in step 1) — pregnancyStage is
+      // always "PRE_PREGNANT" for non-pregnant users so it's not a good gate.
       router.push("/onboarding");
     }
   }, [session, sessionLoading, data, isLoading, router]);
@@ -47,8 +67,14 @@ export default function OverviewClient() {
     return <Loader />;
   }
 
-  const week = data?.user?.pregnancyWeek || 1;
-  const progressPercent = Math.min(Math.round((week / 40) * 100), 100);
+  const lifeStage = data?.user?.lifeStage;
+  const isPregnant = data?.user?.pregnancyStage === "PREGNANT";
+  const isPostpartum = data?.user?.pregnancyStage === "POST_PARTUM";
+
+  const week = data?.user?.pregnancyWeek || 0;
+  const progressPercent = isPregnant
+    ? Math.min(Math.round((week / 40) * 100), 100)
+    : 0;
   const trimester = week <= 12 ? 1 : week <= 26 ? 2 : 3;
 
   const dueDate = data?.user?.dueDate ? new Date(data.user.dueDate) : null;
@@ -59,50 +85,93 @@ export default function OverviewClient() {
           (dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
         ),
       )
-    : "--";
+    : null;
 
   const xp =
-    (data?.reportsCount || 0) * 20 + week * 5 + (data?.todayLog ? 10 : 0);
+    (data?.reportsCount || 0) * 20 +
+    (isPregnant ? week * 5 : 0) +
+    (data?.todayLog ? 10 : 0);
 
   const formatSleep = (duration?: string | number | null) => {
-    const d = parseFloat(duration?.toString() || "8");
+    if (duration == null) return null;
+    const d = parseFloat(duration.toString());
+    if (!Number.isFinite(d) || d <= 0) return null;
     const hours = Math.floor(d);
     const minutes = Math.round((d - hours) * 60);
     return `${hours}h ${minutes}m`;
   };
 
-  const METRICS = [
-    {
+  // Welcome subtitle varies by life stage. We never tell a menopause user
+  // they're "X weeks along".
+  const subtitle = (() => {
+    if (isPregnant) {
+      return `You're ${week} weeks along. Today is about nurturing both you and your little one.`;
+    }
+    if (isPostpartum) {
+      return "Recovery takes time. Today, pick one thing that's just for you.";
+    }
+    switch (lifeStage) {
+      case "TRYING_TO_CONCEIVE":
+        return "Your body is preparing. Track, learn, and breathe.";
+      case "PERIMENOPAUSE":
+        return "Your hormones are shifting. Track the changes — knowledge is power.";
+      case "MENOPAUSE":
+        return "A new chapter. Care for the body that's carried you this far.";
+      case "ADULT_MENSTRUATING":
+        return "Track your cycle, learn your body, fuel it well.";
+      default:
+        return "Today's a great day to log how you're feeling.";
+    }
+  })();
+
+  // Daily-rotating tip relevant to user's life stage. Refreshes every UTC
+  // midnight — keeps the dashboard from looking frozen between sessions.
+  const dailyTip = pickDailyTip(lifeStage);
+
+  const sleepStr = formatSleep(data?.user?.sleepDuration);
+  const moodStr = data?.user?.mood ?? null;
+  const moveMins = data?.user?.movementDuration ?? null;
+
+  // Metrics show only if real data exists. No fake trends, no fake percents.
+  type Metric = {
+    label: string;
+    value: string;
+    icon: typeof Moon;
+    color: string;
+    percent: number;
+  };
+  const METRICS: Metric[] = [];
+  if (sleepStr) {
+    METRICS.push({
       label: "Restful Sleep",
-      value: formatSleep(data?.user?.sleepDuration),
+      value: sleepStr,
       icon: Moon,
       color: "bg-primary",
-      trend: "+12%",
       percent: Math.min(
-        (parseFloat(data?.user?.sleepDuration?.toString() || "8") / 10) * 100,
+        (parseFloat(data?.user?.sleepDuration?.toString() || "0") / 10) * 100,
         100,
       ),
-    },
-    {
-      label: "Emotional Balance",
-      value: data?.user?.mood || "Refreshed",
+    });
+  }
+  if (moodStr) {
+    METRICS.push({
+      label: "Mood Today",
+      value: moodStr,
       icon: Heart,
       color: "bg-secondary",
-      trend: "Steady",
-      percent: 85,
-    },
-    {
-      label: "Gentle Movement",
-      value: `${data?.user?.movementDuration || 30} min`,
+      percent: 100,
+    });
+  }
+  if (moveMins != null && Number(moveMins) > 0) {
+    METRICS.push({
+      label: "Movement",
+      value: `${moveMins} min`,
       icon: Move,
       color: "bg-accent",
-      trend: "Active",
-      percent: Math.min(
-        (parseInt(data?.user?.movementDuration?.toString() || "30") / 60) * 100,
-        100,
-      ),
-    },
-  ];
+      percent: Math.min((Number(moveMins) / 60) * 100, 100),
+    });
+  }
+  const hasAnyMetrics = METRICS.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-20 px-3">
@@ -116,136 +185,165 @@ export default function OverviewClient() {
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
             Welcome home,{" "}
             <span className="text-primary">
-              {data?.user?.name?.split(" ")[0] || "Mama"}
+              {data?.user?.name?.split(" ")[0] || "friend"}
             </span>
             .
           </h1>
           <p className="text-muted-foreground text-lg font-medium opacity-80">
-            You&apos;re {week} weeks along. Take a deep breath—today is about
-            nurturing both you and your little one.
+            {subtitle}
           </p>
+          {/* Daily-rotating tip ribbon — different content every day */}
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-card border border-border/60 px-4 py-1.5 text-xs text-foreground/80 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              Today
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span>{dailyTip.en}</span>
+          </div>
         </motion.div>
 
-        {/* Progress Ring Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-card p-6 rounded-4xl border border-border flex items-center space-x-6 shadow-sm"
-        >
-          <div className="relative w-20 h-20">
-            <svg className="w-full h-full" viewBox="0 0 100 100">
-              <circle
-                className="text-secondary/10 stroke-current"
-                strokeWidth="8"
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-              ></circle>
-              <circle
-                className="text-secondary stroke-current transition-all duration-1000"
-                strokeWidth="8"
-                strokeLinecap="round"
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                strokeDasharray="251.2"
-                strokeDashoffset={251.2 - (251.2 * progressPercent) / 100}
-              ></circle>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">
-              {progressPercent}%
+        {/* Progress Ring Card — pregnancy only */}
+        {isPregnant && week > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card p-6 rounded-4xl border border-border flex items-center space-x-6 shadow-sm"
+          >
+            <div className="relative w-20 h-20">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle
+                  className="text-secondary/10 stroke-current"
+                  strokeWidth="8"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                ></circle>
+                <circle
+                  className="text-secondary stroke-current transition-all duration-1000"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                  strokeDasharray="251.2"
+                  strokeDashoffset={251.2 - (251.2 * progressPercent) / 100}
+                ></circle>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">
+                {progressPercent}%
+              </div>
             </div>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
-              Trimester {trimester}
-            </p>
-            <p className="text-lg font-bold text-foreground leading-tight">
-              Week {week} of 40
-            </p>
-          </div>
-        </motion.div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                Trimester {trimester}
+              </p>
+              <p className="text-lg font-bold text-foreground leading-tight">
+                Week {week} of 40
+              </p>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Main Content (Left) */}
         <div className="lg:col-span-8 space-y-8">
-          {/* Metric Bars */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {METRICS.map((metric, i) => (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                key={metric.label}
-                className="bg-card p-6 rounded-3xl border border-border shadow-sm flex flex-col justify-between h-40"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                    <metric.icon className="w-5 h-5 text-foreground/60" />
+          {/* Metric Bars — render only metrics with real user data */}
+          {hasAnyMetrics ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {METRICS.map((metric, i) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  key={metric.label}
+                  className="bg-card p-6 rounded-3xl border border-border shadow-sm flex flex-col justify-between h-40"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                      <metric.icon className="w-5 h-5 text-foreground/60" />
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold text-primary/60 bg-primary/5 px-2 py-1 rounded-full uppercase">
-                    {metric.trend}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
-                    {metric.label}
-                  </p>
-                  <p className="text-xl font-bold text-foreground">
-                    {metric.value}
-                  </p>
-                  <div className="w-full h-1.5 bg-muted rounded-full mt-3 overflow-hidden">
-                    <div
-                      className={`h-full ${metric.color} opacity-80 rounded-full transition-all duration-1000`}
-                      style={{ width: `${metric.percent}%` }}
-                    ></div>
+                  <div>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                      {metric.label}
+                    </p>
+                    <p className="text-xl font-bold text-foreground">
+                      {metric.value}
+                    </p>
+                    <div className="w-full h-1.5 bg-muted rounded-full mt-3 overflow-hidden">
+                      <div
+                        className={`h-full ${metric.color} opacity-80 rounded-full transition-all duration-1000`}
+                        style={{ width: `${metric.percent}%` }}
+                      ></div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <Link
+              href="/dashboard/wellness"
+              className="block bg-card p-6 rounded-3xl border border-dashed border-border text-center hover:bg-accent/40 transition-colors"
+            >
+              <Sparkles className="w-8 h-8 text-primary/30 mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">
+                Log today&apos;s sleep, mood, and movement
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Once you log a few days, your trends will show up here.
+              </p>
+            </Link>
+          )}
 
-          {/* Personalized Insights */}
+          {/* Today's focus — life-stage-aware nudge, no fake personalization claims */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-primary text-white rounded-3xl p-4 md:p-8  relative overflow-hidden shadow-2xl"
+            className="bg-primary text-white rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-2xl"
           >
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-6">
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="w-8 h-8 text-secondary" />
-                  <h2 className="text-2xl font-bold text-white uppercase tracking-wider">
-                    Personalized NutriMama Insights
-                  </h2>
-                </div>
-                <p className="text-2xl font-medium leading-normal italic opacity-95">
-                  &quot;Based on your hydration levels and recent activity, we
-                  recommend a vitamin-rich smoothie today to maintain your
-                  energy for the third trimester.&quot;
-                </p>
+            <div className="relative z-10 space-y-5">
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-7 h-7 text-secondary" />
+                <h2 className="text-xl md:text-2xl font-bold text-white uppercase tracking-wider">
+                  Today&apos;s Focus
+                </h2>
+              </div>
+              <p className="text-lg md:text-xl font-medium leading-normal opacity-95">
+                {(() => {
+                  if (isPregnant && week > 0) {
+                    return `You're in week ${week} (trimester ${trimester}). Open your chat and ask what to eat or watch for this week — NutriMama answers in your context.`;
+                  }
+                  if (isPostpartum) {
+                    return "Recovery, sleep, and feeding questions — ask the AI anything. We'll respond with India-specific guidance.";
+                  }
+                  if (lifeStage === "TRYING_TO_CONCEIVE") {
+                    return "Ask about your fertile window, supplements (folate, iron), or what to track this cycle.";
+                  }
+                  if (lifeStage === "PERIMENOPAUSE" || lifeStage === "MENOPAUSE") {
+                    return "Ask about hot flashes, sleep, bone health, or anything else you're navigating right now.";
+                  }
+                  return "Log your cycle, mood, or meals — then ask the AI anything about what you're noticing.";
+                })()}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/dashboard/chat"
+                  className="bg-white text-primary px-6 py-3 rounded-full font-bold hover:scale-105 transition-all shadow-xl active:scale-95 text-sm"
+                >
+                  Open AI Chat
+                </Link>
                 <Link
                   href="/dashboard/nutrition"
-                  className="bg-white text-primary px-6 py-3 rounded-full font-bold hover:scale-105 transition-all shadow-xl active:scale-95"
+                  className="bg-white/10 border border-white/30 text-white px-6 py-3 rounded-full font-bold hover:bg-white/20 transition-all text-sm"
                 >
-                  Get Nutrition Recipe
+                  Nutrition Plan
                 </Link>
               </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 md:p-8 border border-white/20 self-center">
-                <p className="text-md font-bold uppercase underline underline-offset-2 text-white mb-2 opacity-80">
-                  Nutrition Focus
-                </p>
-                <p className="text-lg font-medium leading-relaxed">
-                  Increase iron and magnesium intake this week to support muscle
-                  development and reduce nightly leg cramps.
-                </p>
-              </div>
             </div>
-            {/* Abstract shape */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-secondary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
           </motion.div>
 
@@ -376,20 +474,41 @@ export default function OverviewClient() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold font-heading">
-                  {data?.user?.name || "Mami-to-be"}
+                  {data?.user?.name || "Friend"}
                 </h3>
-                <p className="text-xs font-semibold uppercase tracking-wider text-white bg-primary/5 px-4 py-1 rounded-full inline-block mt-2 border border-primary/10">
-                  NutriMama {data?.user?.tier || "FREE"} Member
-                </p>
+                {(() => {
+                  const tierKey: Tier = (data?.user?.tier as Tier) || "FREE";
+                  const badge = TIER_BADGE[tierKey] ?? TIER_BADGE.FREE;
+                  return (
+                    <p
+                      className={`text-xs font-semibold uppercase tracking-wider px-4 py-1 rounded-full inline-block mt-2 border ${badge.className}`}
+                    >
+                      {badge.label} Member
+                    </p>
+                  );
+                })()}
               </div>
               <div className="grid grid-cols-2 divide-x divide-border pt-4">
                 <div className="px-2">
-                  <p className="text-2xl font-bold text-foreground">
-                    {daysToBaby}
-                  </p>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                    Days to Baby
-                  </p>
+                  {isPregnant && daysToBaby != null ? (
+                    <>
+                      <p className="text-2xl font-bold text-foreground">
+                        {daysToBaby}
+                      </p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Days to Baby
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-foreground">
+                        {data?.reportsCount ?? 0}
+                      </p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Reports
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="px-2">
                   <p className="text-2xl font-bold text-foreground">{xp}</p>
@@ -403,80 +522,45 @@ export default function OverviewClient() {
             <div className="absolute top-0 right-0 w-full h-full bg-linear-to-b from-secondary/5 to-transparent"></div>
           </motion.div>
 
-          {/* Community Hub Card */}
-          <div className="bg-[#EEF1FF] dark:bg-card p-8 rounded-[2.5rem] border border-border/50 shadow-sm space-y-6">
+          {/* AI Chat shortcut — real, working feature */}
+          <div className="bg-[#EEF1FF] dark:bg-card p-8 rounded-[2.5rem] border border-border/50 shadow-sm space-y-5">
             <div className="flex items-center space-x-2 text-[#4C5BB4]">
-              <MessageCircle className="w-5 h-5 fill-current" />
+              <MessageSquare className="w-5 h-5 fill-current" />
               <h3 className="font-bold uppercase tracking-widest text-[11px]">
-                Community Hub
+                Ask NutriMama
               </h3>
             </div>
-
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-muted/30 p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
-                <div className="flex items-center space-x-2 mb-2 text-[10px] font-bold text-muted-foreground">
-                  <div className="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center">
-                    S
-                  </div>
-                  <span>Sarah M.</span>
-                </div>
-                Anyone else feeling extra nesting urges this week?
-              </div>
-              <div className="bg-primary/95 text-white p-4 rounded-2xl rounded-tr-none shadow-md text-sm leading-relaxed ml-6">
-                Yes! Just organized the nursery drawer for the third time!
-              </div>
-            </div>
-
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              Cycle questions, pregnancy week-by-week, nutrition for your stage,
+              or anything you&apos;d normally Google — ask it here. We answer
+              in your context and flag anything urgent.
+            </p>
             <Link
               href="/dashboard/chat"
               className="block text-center w-full bg-[#4C5BB4] text-white py-4 rounded-2xl font-bold shadow-lg shadow-[#4C5BB4]/20 hover:scale-[1.02] active:scale-95 transition-all text-sm"
             >
-              Join Discussion
+              Start a chat
             </Link>
           </div>
 
-          {/* Expert Concierge */}
-          <div className="bg-[#FAEED1] dark:bg-secondary/10 p-8 rounded-[2.5rem] border border-border/50 shadow-sm space-y-6">
-            <div className="flex items-center space-x-2 text-[#9A7B31]">
-              <Smile className="w-5 h-5" />
-              <h3 className="font-bold uppercase tracking-widest text-[11px]">
-                Expert Concierge
-              </h3>
-            </div>
-            <p className="text-[13px] text-[#9A7B31] font-medium leading-relaxed italic">
-              Connect with a certified midwife or lactation consultant
-              instantly.
-            </p>
-            <div className="flex -space-x-3 overflow-hidden p-2">
-              {[
-                "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=100&h=100&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=100&h=100",
-                "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=100&h=100",
-              ].map((src, i) => (
-                <div
-                  key={i}
-                  className="relative inline-block h-10 w-10 rounded-full ring-2 ring-white overflow-hidden shadow-sm"
-                >
-                  <Image
-                    src={src}
-                    alt={`Expert ${i + 1}`}
-                    width={100}
-                    height={100}
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-              <div className="flex items-center justify-center h-10 w-10 rounded-full ring-2 ring-white bg-secondary/80 text-white text-[10px] font-bold shadow-sm backdrop-blur-sm">
-                +4
+          {/* Community — honest "coming soon" */}
+          <div className="bg-[#FAEED1] dark:bg-secondary/10 p-8 rounded-[2.5rem] border border-border/50 shadow-sm space-y-4">
+            <div className="flex items-center justify-between text-[#9A7B31]">
+              <div className="flex items-center space-x-2">
+                <MessageCircle className="w-5 h-5" />
+                <h3 className="font-bold uppercase tracking-widest text-[11px]">
+                  Community
+                </h3>
               </div>
+              <span className="text-[9px] font-bold uppercase tracking-widest bg-[#9A7B31]/15 text-[#9A7B31] px-2 py-0.5 rounded-full">
+                Coming soon
+              </span>
             </div>
-            <Link
-              href="/dashboard/chat"
-              className="w-full bg-[#603601] text-white py-4 rounded-2xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-[#603601]/20 hover:scale-[1.02] active:scale-95 transition-all text-sm"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Start Chat</span>
-            </Link>
+            <p className="text-[13px] text-[#9A7B31] font-medium leading-relaxed">
+              Anonymous peer conversations, moderated by certified maternal
+              health experts. We&apos;ll open this once we have a safe
+              moderation layer in place.
+            </p>
           </div>
         </div>
       </div>

@@ -34,8 +34,14 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/NutriLogo.svg",
-    apple: "/NutriLogo.svg",
+    // Browser tab favicon — smaller size, loads fast
+    icon: [
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    // iOS "Add to Home Screen" tile — must be PNG, not SVG.
+    apple: [
+      { url: "/icon.png", sizes: "1024x1024", type: "image/png" },
+    ],
   },
 };
 

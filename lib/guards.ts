@@ -22,6 +22,7 @@ export interface GuardContext {
   userId: string;
   age: number;
   tier: Tier;
+  isStaff: boolean;
   features: UnlockedFeatures;
 }
 
@@ -37,6 +38,7 @@ export async function requireUser(): Promise<GuardContext> {
       lifeStage: true,
       cycleStage: true,
       tier: true,
+      isStaff: true,
       termsAcceptedAt: true,
     },
   });
@@ -58,6 +60,7 @@ export async function requireUser(): Promise<GuardContext> {
     userId: u.id,
     age,
     tier: (u.tier as Tier) ?? "FREE",
+    isStaff: u.isStaff ?? false,
     features,
   };
 }
@@ -72,7 +75,7 @@ export function requireFeature(ctx: GuardContext, feature: keyof UnlockedFeature
 }
 
 export function requireTier(ctx: GuardContext, feature: TierFeature) {
-  if (!tierAllows(ctx.tier, feature)) {
+  if (!tierAllows({ tier: ctx.tier, isStaff: ctx.isStaff }, feature)) {
     throw new GuardError(
       "TIER_UPGRADE_REQUIRED",
       "Upgrade to Care or Pro to use this.",
@@ -81,13 +84,14 @@ export function requireTier(ctx: GuardContext, feature: TierFeature) {
 }
 
 // Per-day / per-month usage check. Caller passes a counter callback so
-// we don't bake a specific schema into the guard.
+// we don't bake a specific schema into the guard. Staff users bypass all
+// usage caps (tierLimit returns Infinity for them).
 export async function requireUsageBudget(
   ctx: GuardContext,
   feature: TierFeature,
   usedSoFar: number,
 ) {
-  const limit = tierLimit(ctx.tier, feature);
+  const limit = tierLimit({ tier: ctx.tier, isStaff: ctx.isStaff }, feature);
   if (limit === Infinity) return;
   if (usedSoFar >= limit) {
     throw new GuardError(

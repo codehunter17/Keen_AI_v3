@@ -16,7 +16,7 @@ import {
 import { findRelevantConditions, conditionsContextBlock } from "@/lib/conditions-kb";
 import { differenceInCalendarDays } from "date-fns";
 import { runPredictionAndStoreFact } from "@/lib/actions/predict";
-import { TIER_LIMITS, type Tier } from "@/lib/tiers";
+import { tierLimit, type Tier } from "@/lib/tiers";
 import { triage, triagePreamble } from "@/lib/triage";
 import { preCheck, withDisclaimer, INDIA_EMERGENCY } from "@/lib/safety";
 import { scrubPhi, scrubResponse } from "@/lib/phi-scrubber";
@@ -66,16 +66,9 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) return new NextResponse("User not found", { status: 404 });
 
-  // ── 2. Tier gate (per-day, not all-time) ────────────────────
+  // ── 2. Tier gate (per-day, not all-time). Staff bypass everything. ────
   const tier = (user.tier as Tier) || "FREE";
-  // Compatibility shim: older TIER_LIMITS shape used `chats`, new uses `aiChatsPerDay`.
-  const limits = TIER_LIMITS[tier] as Record<string, number | boolean>;
-  const dailyLimit =
-    typeof limits.aiChatsPerDay === "number"
-      ? (limits.aiChatsPerDay as number)
-      : typeof limits.chats === "number"
-        ? (limits.chats as number)
-        : Infinity;
+  const dailyLimit = tierLimit({ tier, isStaff: user.isStaff ?? false }, "aiChatsPerDay");
 
   if (dailyLimit !== Infinity) {
     const today = new Date();
@@ -87,8 +80,9 @@ export async function POST(req: NextRequest) {
       },
     });
     if (used >= dailyLimit) {
+      const tierLabel = tier === "FREE" ? "Free" : tier === "CARE_49" ? "Care" : "Pro";
       return new NextResponse(
-        `You've reached your ${dailyLimit}-chats-per-day limit on the ${tier === "FREE" ? "Free" : tier} plan. Upgrade for more — visit /pricing.`,
+        `You've reached your ${dailyLimit}-chats-per-day limit on the ${tierLabel} plan. Upgrade for more — visit /pricing.`,
         { status: 403 },
       );
     }

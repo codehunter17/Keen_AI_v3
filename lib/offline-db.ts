@@ -123,7 +123,7 @@ export interface QueuedMeal {
 
 export async function enqueueMeal(meal: Omit<QueuedMeal, "id" | "synced">): Promise<number> {
   return tx<number>("meal-queue", "readwrite", (s) =>
-    promisify<number>(s.add({ ...meal, synced: false }) as IDBRequest<IDBValidKey>) as Promise<number>,
+    promisify<number>(s.add({ ...meal, synced: false }) as unknown as IDBRequest<number>),
   );
 }
 

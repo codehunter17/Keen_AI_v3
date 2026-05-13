@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cancelSubscription } from "@/lib/actions/subscription";
-import { requestAccountDeletion } from "@/lib/actions/lifecycle";
+import { requestAccountDeletion, setAllowModelTraining } from "@/lib/actions/lifecycle";
 import { deleteDependent } from "@/lib/actions/dependent";
 import { format } from "date-fns";
 
@@ -195,20 +195,65 @@ export function SettingsClient({
           You&apos;re in control. Withdraw any consent below at any time.
         </p>
 
-        <div className="mt-3 space-y-2 text-sm">
-          <div className="flex items-start justify-between">
+        <div className="mt-4 rounded-xl bg-muted/40 border border-border p-3 text-xs text-muted-foreground leading-relaxed">
+          <p className="font-medium text-foreground mb-1">
+            How your data is protected
+          </p>
+          <ul className="list-disc pl-4 space-y-1">
+            <li>
+              Your <strong>name and email never leave the account record</strong>.
+              They are not attached to chats, logs, reports, or anything used
+              for training.
+            </li>
+            <li>
+              Training and ML pipelines only see a <strong>random account ID</strong>{" "}
+              (a UUID with no link back to your identity).
+            </li>
+            <li>
+              Aadhaar, PAN, phone numbers, ABHA IDs, and bank details are
+              automatically redacted before any message reaches our AI providers.
+            </li>
+            <li>
+              Encrypted in transit (TLS 1.2+) and at rest (AES-256).
+            </li>
+          </ul>
+        </div>
+
+        <div className="mt-4 space-y-2 text-sm">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-medium">Allow anonymized data for AI training</p>
               <p className="text-xs text-muted-foreground">
-                {user.allowModelTraining ? "Granted" : "Not granted"}
+                {user.allowModelTraining ? "Granted" : "Not granted"} — toggle
+                anytime. Only your pseudonymous ID is used; never your name or
+                email.{" "}
+                <a href="/legal/privacy" className="underline">
+                  Read the policy
+                </a>
+                .
               </p>
             </div>
-            <a
-              href="/dashboard/settings/privacy"
-              className="text-xs text-primary underline"
+            <button
+              type="button"
+              role="switch"
+              aria-checked={user.allowModelTraining}
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  await setAllowModelTraining(!user.allowModelTraining);
+                  router.refresh();
+                })
+              }
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                user.allowModelTraining ? "bg-primary" : "bg-muted"
+              }`}
             >
-              Manage
-            </a>
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  user.allowModelTraining ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
           </div>
         </div>
 

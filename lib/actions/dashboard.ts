@@ -28,6 +28,7 @@ export async function getDashboardData() {
             select: {
                 name: true,
                 email: true,
+                lifeStage: true,
                 pregnancyStage: true,
                 pregnancyWeek: true,
                 dueDate: true,

@@ -9,14 +9,15 @@ export const metadata = { title: "Plans · NutriMama" };
 
 const FEATURES: { label: string; tiers: ("FREE" | "CARE_49" | "PRO_99")[] }[] = [
   { label: "Cycle tracking & calendar", tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "Daily wellness log (sleep, mood, water)", tiers: ["FREE", "CARE_49", "PRO_99"] },
   { label: "Curated content library", tiers: ["FREE", "CARE_49", "PRO_99"] },
   { label: "AI chat companion", tiers: ["FREE", "CARE_49", "PRO_99"] },
   { label: "Medical report analysis", tiers: ["CARE_49", "PRO_99"] },
-  { label: "Personalized weekly meal plans", tiers: ["CARE_49", "PRO_99"] },
+  { label: "Personalized meal plans", tiers: ["CARE_49", "PRO_99"] },
   { label: "PCOS screening + insights", tiers: ["CARE_49", "PRO_99"] },
   { label: "Pregnancy risk prediction (ML)", tiers: ["CARE_49", "PRO_99"] },
   { label: "PDF export of your reports", tiers: ["CARE_49", "PRO_99"] },
-  { label: "Unlimited everything", tiers: ["PRO_99"] },
+  { label: "Unlimited reports & meal plans", tiers: ["PRO_99"] },
   { label: "Partner / family access", tiers: ["PRO_99"] },
   { label: "Priority support", tiers: ["PRO_99"] },
 ];
@@ -46,8 +47,8 @@ export default async function PricingPage() {
             features={FEATURES.filter((f) => f.tiers.includes("FREE"))}
             limits={[
               `${TIER_LIMITS.FREE.aiChatsPerDay} AI chats / day`,
-              `${TIER_LIMITS.FREE.reportAnalysesPerMonth} report / month`,
-              "No meal plans",
+              "Cycle + daily wellness log",
+              "No reports, no meal plans",
             ]}
             cta={
               session ? (
@@ -67,9 +68,9 @@ export default async function PricingPage() {
             highlight={true}
             features={FEATURES.filter((f) => f.tiers.includes("CARE_49"))}
             limits={[
-              `${TIER_LIMITS.CARE_49.aiChatsPerDay} chats / day`,
-              `${TIER_LIMITS.CARE_49.reportAnalysesPerMonth} reports / month`,
-              `${TIER_LIMITS.CARE_49.nutritionPlanPerMonth} meal plan regenerations / month`,
+              `${TIER_LIMITS.CARE_49.aiChatsPerDay} AI chats / day`,
+              `${TIER_LIMITS.CARE_49.reportAnalysesPerMonth} report analyses / month`,
+              `${TIER_LIMITS.CARE_49.nutritionPlanPerMonth} meal plans / month`,
             ]}
             cta={
               session ? (
@@ -92,7 +93,7 @@ export default async function PricingPage() {
             premium={true}
             features={FEATURES.filter((f) => f.tiers.includes("PRO_99"))}
             limits={[
-              "Unlimited AI chats",
+              `${TIER_LIMITS.PRO_99.aiChatsPerDay} AI chats / day`,
               "Unlimited reports",
               "Unlimited meal plans",
               "Partner / family access",

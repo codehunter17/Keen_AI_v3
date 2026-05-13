@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { runPredictionAndStoreFact } from "./predict";
 import { storeMemory } from "./memory";
-import { TIER_LIMITS, type Tier } from "@/lib/tiers";
+import { tierLimit, type Tier } from "@/lib/tiers";
 import { nutritionRisk } from "@/lib/medical-kb";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { invokeMultimodal } from "@/lib/llm";
@@ -54,15 +54,13 @@ export async function analyzeReport(reportId: string, fileUrl: string) {
   if (!user) throw new Error("User not found");
 
   const tier = (user.tier as Tier) || "FREE";
-  // Compatibility: old tiers used `reports` (all-time), new uses `reportAnalysesPerMonth`.
-  const limits = TIER_LIMITS[tier] as Record<string, number | boolean>;
-  const monthlyLimit =
-    typeof limits.reportAnalysesPerMonth === "number"
-      ? (limits.reportAnalysesPerMonth as number)
-      : typeof limits.reports === "number"
-        ? (limits.reports as number)
-        : Infinity;
+  const monthlyLimit = tierLimit({ tier, isStaff: user.isStaff ?? false }, "reportAnalysesPerMonth");
 
+  if (monthlyLimit === 0) {
+    throw new Error(
+      "Report analysis is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    );
+  }
   if (monthlyLimit !== Infinity) {
     const now = new Date();
     const used = await prisma.report.count({
@@ -73,8 +71,9 @@ export async function analyzeReport(reportId: string, fileUrl: string) {
       },
     });
     if (used >= monthlyLimit) {
+      const tierLabel = tier === "FREE" ? "Free" : tier === "CARE_49" ? "Care" : "Pro";
       throw new Error(
-        `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tier === "FREE" ? "Free" : tier} plan. Upgrade for more — visit /pricing.`,
+        `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tierLabel} plan. Upgrade for more — visit /pricing.`,
       );
     }
   }
@@ -299,13 +298,12 @@ export async function analyzeReportInline(input: z.infer<typeof inlineSchema>) {
 
   // Tier monthly limit (per-month, like analyzeReport)
   const tier = (user.tier as Tier) || "FREE";
-  const limits = TIER_LIMITS[tier] as Record<string, number | boolean>;
-  const monthlyLimit =
-    typeof limits.reportAnalysesPerMonth === "number"
-      ? (limits.reportAnalysesPerMonth as number)
-      : typeof limits.reports === "number"
-        ? (limits.reports as number)
-        : Infinity;
+  const monthlyLimit = tierLimit({ tier, isStaff: user.isStaff ?? false }, "reportAnalysesPerMonth");
+  if (monthlyLimit === 0) {
+    throw new Error(
+      "Report analysis is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    );
+  }
   if (monthlyLimit !== Infinity) {
     const now = new Date();
     const used = await prisma.report.count({
@@ -316,8 +314,9 @@ export async function analyzeReportInline(input: z.infer<typeof inlineSchema>) {
       },
     });
     if (used >= monthlyLimit) {
+      const tierLabel = tier === "FREE" ? "Free" : tier === "CARE_49" ? "Care" : "Pro";
       throw new Error(
-        `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tier === "FREE" ? "Free" : tier} plan. Upgrade for more — visit /pricing.`,
+        `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tierLabel} plan. Upgrade for more — visit /pricing.`,
       );
     }
   }

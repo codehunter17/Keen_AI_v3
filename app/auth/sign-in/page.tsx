@@ -142,7 +142,7 @@ export default function SignInPage() {
                 setLoading(true);
                 await signIn.social({
                   provider: "google",
-                  callbackURL: "/",
+                  callbackURL: "/dashboard",
                 });
               }}
               className="mt-6 flex w-full items-center justify-center space-x-3 rounded-xl border border-border bg-card px-4 py-3 font-semibold transition-all hover:bg-muted hover:scale-[1.02] active:scale-95"

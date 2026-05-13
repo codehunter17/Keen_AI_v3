@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getRecommendedContent } from "@/lib/actions/content";
+import { pickDaily, DAILY_FACTS } from "@/lib/daily";
 
 export const metadata = { title: "Learn · NutriMama" };
 
@@ -10,6 +11,8 @@ export default async function LearnPage() {
   if (!s) redirect("/auth/login");
 
   const items = await getRecommendedContent({ limit: 24 });
+  // Today's "did you know" — rotates daily.
+  const fact = pickDaily(DAILY_FACTS);
 
   return (
     <main className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -20,6 +23,22 @@ export default async function LearnPage() {
           stage of life.
         </p>
       </header>
+
+      {/* Daily fact card — different fact every day */}
+      <div className="mb-6 rounded-2xl bg-linear-to-br from-primary/10 via-secondary/10 to-gold/5 border border-primary/15 p-5">
+        <p className="text-[10px] uppercase tracking-widest font-semibold text-primary mb-2">
+          Did you know · today
+        </p>
+        <h2 className="font-heading text-xl text-foreground leading-tight">
+          {fact.title}
+        </h2>
+        <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
+          {fact.body}
+        </p>
+        <p className="text-[10px] text-muted-foreground mt-3 uppercase tracking-widest">
+          Source · {fact.source}
+        </p>
+      </div>
 
       {items.length === 0 ? (
         <div className="rounded-2xl bg-card lift p-8 text-center">
