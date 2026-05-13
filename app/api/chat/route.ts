@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id },
       orderBy: { date: "desc" },
       take: 3,
-      select: { date: true, mood: true, symptoms: true, meals: true },
+      select: { date: true, mood: true, symptoms: true, meals: true, waterGlasses: true },
     }),
     getRelevantMemories(session.user.id, phi.scrubbed, 3),
     saveMemoryPromise,
