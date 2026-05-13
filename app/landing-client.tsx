@@ -259,17 +259,14 @@ export default function LandingPageClient({
                     </div>
                   </div>
 
-                  {/* Two orbiting cards — kept minimal so the ring breathes.
-                      Removed the streak and voice cards (visual noise + fake for
-                      day-zero users). The two we kept show the *core* value prop:
-                      "AI knows your cycle context" + "We read your reports". */}
-
-                  {/* Top-left: AI chat */}
+                  {/* Desktop / tablet only — orbiting cards positioned around
+                      the ring. On mobile these collide, so we hide them and
+                      render a clean stacked version below the ring instead. */}
                   <motion.div
                     initial={{ opacity: 0, x: -20, y: -10 }}
                     animate={{ opacity: 1, x: 0, y: 0 }}
                     transition={{ delay: 0.45 }}
-                    className="absolute -top-2 -left-2 sm:-left-6 bg-card border border-border/60 shadow-lg rounded-2xl p-3.5 max-w-[200px]"
+                    className="hidden md:block absolute -top-2 -left-2 lg:-left-6 bg-card border border-border/60 shadow-lg rounded-2xl p-3.5 max-w-[200px]"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold">
@@ -284,12 +281,11 @@ export default function LandingPageClient({
                     </p>
                   </motion.div>
 
-                  {/* Bottom-right: AI report finding (rotates daily) */}
                   <motion.div
                     initial={{ opacity: 0, x: 20, y: 10 }}
                     animate={{ opacity: 1, x: 0, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="absolute -bottom-2 -right-2 sm:-right-6 bg-card border border-border/60 shadow-lg rounded-2xl p-3.5 max-w-[180px]"
+                    className="hidden md:block absolute -bottom-2 -right-2 lg:-right-6 bg-card border border-border/60 shadow-lg rounded-2xl p-3.5 max-w-[180px]"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">
@@ -304,15 +300,52 @@ export default function LandingPageClient({
                     </p>
                   </motion.div>
 
-                  {/* ICMR credibility badge — small, no rotation */}
+                  {/* ICMR credibility badge — desktop only, mobile gets it inline below */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.8 }}
-                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-card border border-border shadow-sm rounded-full px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    className="hidden md:inline-flex absolute -bottom-3 left-1/2 -translate-x-1/2 bg-card border border-border shadow-sm rounded-full px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
                   >
                     {t("Backed by ICMR-NIN 2020", "ICMR-NIN 2020 आधारित")}
                   </motion.div>
+                </div>
+
+                {/* Mobile-only — stacked content below the ring. Same daily
+                    content as the desktop orbiting cards but laid out
+                    sensibly for a narrow viewport. */}
+                <div className="md:hidden mt-6 space-y-3 max-w-[420px] mx-auto">
+                  <div className="bg-card border border-border/60 shadow-sm rounded-2xl p-3.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold">
+                        AI
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                        {t("Today", "आज")}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-snug text-foreground/90">
+                      {t(todaysTip.en, todaysTip.hi)}
+                    </p>
+                  </div>
+
+                  <div className="bg-card border border-border/60 shadow-sm rounded-2xl p-3.5">
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-primary mb-1.5">
+                      {t("Report finding", "रिपोर्ट")}
+                    </p>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="font-heading text-xl text-foreground leading-tight">
+                        {todaysFinding.value}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {t(todaysFinding.note.en, todaysFinding.note.hi)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pt-1">
+                    {t("Backed by ICMR-NIN 2020", "ICMR-NIN 2020 आधारित")}
+                  </p>
                 </div>
               </motion.div>
             </div>
