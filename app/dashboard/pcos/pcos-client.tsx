@@ -45,10 +45,15 @@ export function PcosScreenClient() {
       );
       try {
         const res = await submitPcosScreen(payload as Record<Key, boolean>);
-        setResult(res);
+        // Server action returns a discriminated union: result | paywall.
+        // This survives Next.js production error masking (vs throwing).
+        if (res.kind === "paywall") {
+          setPaywall(res.message);
+        } else {
+          setResult({ trueCount: res.trueCount, risk: res.risk, insight: res.insight });
+        }
       } catch (e) {
-        // PCOS screening is a Care/Pro feature. Free users see paywall
-        // instead of an uncaught exception that breaks the page.
+        // Legacy fallback if the action throws an unexpected error.
         if (isPaywallError(e)) {
           setPaywall(getErrorMessage(e));
         } else {

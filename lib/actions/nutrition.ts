@@ -8,7 +8,15 @@ import { runPredictionAndStoreFact } from "./predict";
 import { tierAllows, tierLimit, type Tier } from "@/lib/tiers";
 import { startOfMonth, endOfMonth } from "date-fns";
 
-export async function getNutritionPlan() {
+// Discriminated return so the client can tell "show paywall" from "show plan"
+// WITHOUT relying on error messages — Next.js masks those in production
+// (they become generic "Server Components render" strings, breaking any
+// client-side `error.message.includes(...)` paywall detection).
+export type NutritionPlanResult =
+  | { kind: "plan"; plan: Record<string, unknown> }
+  | { kind: "paywall"; reason: "TIER_LOCKED" | "QUOTA_EXCEEDED"; message: string };
+
+export async function getNutritionPlan(): Promise<NutritionPlanResult> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
 
@@ -19,9 +27,12 @@ export async function getNutritionPlan() {
   const tier = (user.tier as Tier) || "FREE";
   const ident = { tier, isStaff: user.isStaff ?? false };
   if (!tierAllows(ident, "mealPlans")) {
-    throw new Error(
-      "Personalized meal plans are a Care/Pro feature. Upgrade to unlock — visit /pricing.",
-    );
+    return {
+      kind: "paywall",
+      reason: "TIER_LOCKED",
+      message:
+        "Personalized meal plans are a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    };
   }
   const monthlyLimit = tierLimit(ident, "nutritionPlanPerMonth");
   if (monthlyLimit !== Infinity) {
@@ -33,9 +44,11 @@ export async function getNutritionPlan() {
       },
     });
     if (used >= monthlyLimit) {
-      throw new Error(
-        `You've used your ${monthlyLimit} meal plans for this month. Upgrade to Pro for unlimited — visit /pricing.`,
-      );
+      return {
+        kind: "paywall",
+        reason: "QUOTA_EXCEEDED",
+        message: `You've used your ${monthlyLimit} meal plans for this month. Upgrade to Pro for unlimited — visit /pricing.`,
+      };
     }
   }
 
@@ -50,7 +63,7 @@ export async function getNutritionPlan() {
   });
 
   if (plan && plan.planData) {
-    return plan.planData;
+    return { kind: "plan", plan: plan.planData as Record<string, unknown> };
   }
 
   const model = new ChatGroq({
@@ -98,7 +111,7 @@ RETURN JSON ONLY:
       },
     });
 
-    return planData;
+    return { kind: "plan", plan: planData as Record<string, unknown> };
   } catch (e) {
     console.error("Failed to generate plan:", e);
     throw new Error("Failed to generate nutrition plan. Please try again.");

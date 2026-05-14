@@ -181,9 +181,16 @@ const pcosSchema = z.object({
   familyHistory: z.boolean(),
 });
 
-export async function submitPcosScreen(input: z.infer<typeof pcosSchema>) {
+export type PcosScreenResult =
+  | { kind: "result"; trueCount: number; risk: "LOW" | "MODERATE" | "HIGH"; insight: string }
+  | { kind: "paywall"; reason: "TIER_LOCKED"; message: string };
+
+export async function submitPcosScreen(
+  input: z.infer<typeof pcosSchema>,
+): Promise<PcosScreenResult> {
   const s = await requireSessionUser();
-  // Tier gate: PCOS screening is Care/Pro/staff only.
+  // Tier gate: PCOS screening is Care/Pro/staff only. Return a paywall
+  // object (don't throw) so the client can detect it reliably in prod.
   const u = await prisma.user.findUnique({
     where: { id: s.user.id },
     select: { tier: true, isStaff: true },
@@ -191,9 +198,11 @@ export async function submitPcosScreen(input: z.infer<typeof pcosSchema>) {
   if (!u) throw new Error("USER_NOT_FOUND");
   const tier = (u.tier as Tier) || "FREE";
   if (!tierAllows({ tier, isStaff: u.isStaff }, "pcosScreening")) {
-    throw new Error(
-      "PCOS screening is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
-    );
+    return {
+      kind: "paywall",
+      reason: "TIER_LOCKED",
+      message: "PCOS screening is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    };
   }
   const data = pcosSchema.parse(input);
 
@@ -220,5 +229,5 @@ export async function submitPcosScreen(input: z.infer<typeof pcosSchema>) {
   const { awardBadge } = await import("./badges");
   awardBadge("PCOS_SCREENED").catch(() => {});
 
-  return { trueCount, risk, insight };
+  return { kind: "result", trueCount, risk, insight };
 }

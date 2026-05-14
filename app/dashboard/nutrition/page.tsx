@@ -6,25 +6,36 @@ import { useState } from "react";
 import Link from "next/link";
 import { Info, AlertCircle, Apple, Sparkles, Lock } from "lucide-react";
 import { pickDaily, DAILY_NUTRIENT_FOCUS } from "@/lib/daily";
-import { isTierLockError, isQuotaError } from "@/lib/errors";
 
 export default function NutritionPage() {
   const [activeDay, setActiveDay] = useState(1);
   // Today's "focus nutrient" — rotates daily, same for everyone on a given date.
   const focus = pickDaily(DAILY_NUTRIENT_FOCUS);
-  const { data, isLoading, error } = useQuery({
+  const { data: result, isLoading, error } = useQuery({
     queryKey: ["nutritionPlan"],
     queryFn: async () => await getNutritionPlan(),
-    // Don't retry paywall errors — they won't resolve without an upgrade.
-    retry: (failureCount, err) => {
-      if (isTierLockError(err) || isQuotaError(err)) return false;
-      return failureCount < 1;
-    },
+    // The server action now returns a discriminated union (plan vs paywall)
+    // instead of throwing for paywalls. Errors that still reach here are
+    // genuine generation failures — retry once.
+    retry: 1,
   });
 
-  // Tier-locked → render a paywall instead of crashing or spinning forever.
-  const isTierLocked = isTierLockError(error);
-  const isQuotaExceeded = isQuotaError(error);
+  // Paywall flag comes from the result shape, not the error message.
+  // This survives Next.js production error-masking.
+  const isTierLocked = result?.kind === "paywall" && result.reason === "TIER_LOCKED";
+  const isQuotaExceeded = result?.kind === "paywall" && result.reason === "QUOTA_EXCEEDED";
+  // The plan payload is dynamic JSON from the LLM — widen the shape so
+  // the existing JSX (which reads milestone, topNutrients, avoidFoods,
+  // days[], etc.) can keep accessing fields without a narrower type fight.
+  const data = result?.kind === "plan"
+    ? (result.plan as {
+        milestone: string;
+        preferenceReasoning?: string;
+        topNutrients?: string[];
+        avoidFoods?: string[];
+        days: { day: number; breakfast?: unknown; lunch?: unknown; dinner?: unknown; snacks?: unknown }[];
+      })
+    : null;
 
   if (isLoading) {
     return (
