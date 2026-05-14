@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { logCycle, deleteCycleEntry } from "@/lib/actions/cycle";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, differenceInCalendarDays } from "date-fns";
+import { LiveCycleRing } from "@/components/live-cycle-ring";
 
 interface CycleEntry {
   id: string;
@@ -89,6 +90,35 @@ export function CycleTracker({
           Track your period, spot patterns, and prepare for what&apos;s next.
         </p>
       </header>
+
+      {/* Live cycle ring — large, animated, interactive. Shows the user
+          where she is in her cycle at a glance. Compute today's cycle day
+          from the most-recent period start in history. */}
+      <section className="rounded-3xl bg-card border border-border lift p-6 sm:p-8 pb-12">
+        {(() => {
+          const lastStart = prediction.lastStart
+            ? new Date(prediction.lastStart)
+            : history[0]?.startDate
+              ? new Date(history[0].startDate)
+              : null;
+          const cycleDay = lastStart
+            ? Math.max(1, differenceInCalendarDays(new Date(), lastStart) + 1)
+            : null;
+          const nextStart = prediction.nextPredictedStart
+            ? new Date(prediction.nextPredictedStart)
+            : null;
+          const nextPeriodInDays = nextStart
+            ? Math.max(0, differenceInCalendarDays(nextStart, new Date()))
+            : null;
+          return (
+            <LiveCycleRing
+              cycleDay={cycleDay}
+              averageLength={prediction.averageLengthDays ?? 28}
+              nextPeriodInDays={nextPeriodInDays}
+            />
+          );
+        })()}
+      </section>
 
       {/* Prediction hero */}
       <section className="rounded-2xl surface-premium lift-strong p-6">

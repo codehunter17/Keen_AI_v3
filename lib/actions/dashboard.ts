@@ -87,5 +87,21 @@ export async function getDashboardData() {
         })
     ]);
 
-    return { user, todayLog, reportsCount, reportsAnalyzedCount, chatsCount, calendarEvents };
+    // Most-recent cycle log — used to compute today's cycle day for the
+    // live phase strip on the dashboard. Lightweight extra query (1 row).
+    const lastCycle = await prisma.cycleLog.findFirst({
+        where: { userId: session.user.id },
+        orderBy: { startDate: "desc" },
+        select: { startDate: true },
+    });
+
+    return {
+        user,
+        todayLog,
+        reportsCount,
+        reportsAnalyzedCount,
+        chatsCount,
+        calendarEvents,
+        lastCycleStart: lastCycle?.startDate ?? null,
+    };
 }

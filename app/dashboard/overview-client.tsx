@@ -23,6 +23,7 @@ import { CreateEventModal } from "@/components/calendar/create-event-modal";
 import { Loader } from "@/components/ui/loader";
 import { type Tier } from "@/lib/tiers";
 import { pickDailyTip } from "@/lib/daily";
+import { CyclePhaseStrip } from "@/components/cycle-phase-strip";
 
 const TIER_BADGE: Record<Tier, { label: string; className: string }> = {
   FREE: {
@@ -127,6 +128,27 @@ export default function OverviewClient() {
   // Daily-rotating tip relevant to user's life stage. Refreshes every UTC
   // midnight — keeps the dashboard from looking frozen between sessions.
   const dailyTip = pickDailyTip(lifeStage);
+
+  // Compute current cycle day from the user's most recent period log.
+  // Shown to menstruating users only — not relevant for pregnancy/menopause.
+  const isMenstruating =
+    !isPregnant &&
+    !isPostpartum &&
+    (lifeStage === "ADULT_MENSTRUATING" ||
+      lifeStage === "TRYING_TO_CONCEIVE" ||
+      lifeStage === "PERIMENOPAUSE");
+  const lastCycleStart = data?.lastCycleStart
+    ? new Date(data.lastCycleStart)
+    : null;
+  const cycleDay = lastCycleStart
+    ? Math.max(1, Math.floor(
+        (Date.now() - lastCycleStart.getTime()) / 86_400_000,
+      ) + 1)
+    : null;
+  const normalizedCycleDay = cycleDay ? ((cycleDay - 1) % 28) + 1 : null;
+  const nextPeriodInDays = normalizedCycleDay
+    ? Math.max(0, 28 - normalizedCycleDay + 1)
+    : null;
 
   const sleepStr = formatSleep(data?.user?.sleepDuration);
   const moodStr = data?.user?.mood ?? null;
@@ -250,6 +272,16 @@ export default function OverviewClient() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Main Content (Left) */}
         <div className="lg:col-span-8 space-y-8">
+          {/* Live cycle phase strip — for menstruating users only.
+              Different visual language from the big ring on /dashboard/cycle:
+              horizontal wave bars with pulsing today-marker. */}
+          {isMenstruating && (
+            <CyclePhaseStrip
+              cycleDay={normalizedCycleDay}
+              nextPeriodInDays={nextPeriodInDays}
+            />
+          )}
+
           {/* Metric Bars — render only metrics with real user data */}
           {hasAnyMetrics ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
