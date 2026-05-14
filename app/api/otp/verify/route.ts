@@ -132,12 +132,35 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 3. Issue a Better Auth session. signInEmail returns a Set-Cookie
-  // header on the underlying response; we forward it on ours.
-  const signInResult = await auth.api.signInEmail({
-    body: { email: user.email, password },
-    returnHeaders: true,
-  });
+  // 3. Issue a Better Auth session via signInEmail with `asResponse: true`.
+  // That returns a full Response object whose Set-Cookie headers we copy
+  // onto our own response. `returnHeaders` alone wasn't reliably surfacing
+  // the cookie back to the browser — `asResponse` is the documented pattern.
+  let authResponse: Response;
+  try {
+    authResponse = await auth.api.signInEmail({
+      body: { email: user.email, password },
+      asResponse: true,
+    });
+  } catch (err) {
+    console.error("[otp/verify] signInEmail failed:", err);
+    return NextResponse.json(
+      { ok: false, reason: "SESSION_CREATE_FAILED" },
+      { status: 500 },
+    );
+  }
+
+  if (!authResponse.ok) {
+    console.error(
+      "[otp/verify] signInEmail returned non-OK:",
+      authResponse.status,
+      await authResponse.text().catch(() => ""),
+    );
+    return NextResponse.json(
+      { ok: false, reason: "SESSION_CREATE_FAILED" },
+      { status: 500 },
+    );
+  }
 
   const res = NextResponse.json({
     ok: true,
@@ -145,10 +168,15 @@ export async function POST(req: NextRequest) {
     needsOnboarding: !user.dob || !user.lifeStage || !user.termsAcceptedAt,
   });
 
-  // Forward the auth cookie. Better Auth wraps the response in a Headers
-  // object on `returnHeaders: true`.
-  const cookieHeader = signInResult.headers.get("set-cookie");
-  if (cookieHeader) res.headers.append("set-cookie", cookieHeader);
+  // Forward every Set-Cookie header Better Auth wrote. There can be more
+  // than one (session + csrf), so we iterate rather than overwrite.
+  // `Headers.getSetCookie()` is the modern API; fall back for older runtimes.
+  const setCookies = typeof authResponse.headers.getSetCookie === "function"
+    ? authResponse.headers.getSetCookie()
+    : [authResponse.headers.get("set-cookie")].filter((c): c is string => Boolean(c));
+  for (const cookie of setCookies) {
+    res.headers.append("set-cookie", cookie);
+  }
 
   return res;
 }

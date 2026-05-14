@@ -109,12 +109,15 @@ export default function SignInPage() {
         body: JSON.stringify({ phone: confirmedPhone, code }),
       });
       const data = await res.json();
-      setLoading(false);
       if (!data.ok) {
+        setLoading(false);
         setError(data.message ?? "Wrong code. Try again.");
         return;
       }
-      router.push(data.needsOnboarding ? "/onboarding" : "/dashboard");
+      // Hard nav (not router.push) so the freshly-set session cookie is
+      // applied before the destination page runs any auth checks. router.push
+      // can occasionally race with the cookie write on slow connections.
+      window.location.href = data.needsOnboarding ? "/onboarding" : "/dashboard";
     } catch {
       setLoading(false);
       setError("Network issue. Check your connection and try again.");

@@ -110,12 +110,14 @@ export default function SignUpPage() {
         body: JSON.stringify({ phone: confirmedPhone, code }),
       });
       const data = await res.json();
-      setLoading(false);
       if (!data.ok) {
+        setLoading(false);
         setError(data.message ?? "Wrong code. Try again.");
         return;
       }
-      router.push(data.needsOnboarding ? "/onboarding" : "/dashboard");
+      // Hard nav so the new session cookie is in place before the
+      // destination page's auth check runs.
+      window.location.href = data.needsOnboarding ? "/onboarding" : "/dashboard";
     } catch {
       setLoading(false);
       setError("Network issue. Check your connection.");
