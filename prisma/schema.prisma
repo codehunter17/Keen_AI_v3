@@ -72,6 +72,17 @@ model User {
   // manually for invited team members. Never settable from user input.
   isStaff             Boolean  @default(false)
 
+  // ── Phone auth (Twilio OTP) ──────────────────────────────
+  // Optional second login path — users who signed up via phone OTP have
+  // this set; users who signed up via email may add it later. Phone is
+  // stored in E.164 format (+91xxxxxxxxxx).
+  phoneNumber         String?  @unique
+  phoneVerified       Boolean  @default(false)
+  phoneVerifiedAt     DateTime?
+  // 4-6 digit PIN for app re-entry (BCrypt-hashed, never plaintext)
+  pinHash             String?
+  pinSetAt            DateTime?
+
   // ── DPDP consents (audit trail lives in ConsentRecord) ───
   termsAcceptedAt        DateTime?
   privacyAcceptedAt      DateTime?
