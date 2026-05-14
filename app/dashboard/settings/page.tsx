@@ -9,7 +9,7 @@ export const metadata = { title: "Settings · NutriMama" };
 
 export default async function SettingsPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
 
   const [user, sub, dependents] = await Promise.all([
     prisma.user.findUnique({
@@ -33,7 +33,7 @@ export default async function SettingsPage() {
       orderBy: { createdAt: "desc" },
     }),
   ]);
-  if (!user) redirect("/auth/login");
+  if (!user) redirect("/auth/sign-in");
 
   return (
     <SettingsClient

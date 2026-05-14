@@ -10,7 +10,7 @@ export const metadata = { title: "Log a meal · NutriMama" };
 
 export default async function MealsPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-5 w-full">

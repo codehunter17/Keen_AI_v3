@@ -17,6 +17,7 @@ import { findRelevantConditions, conditionsContextBlock } from "@/lib/conditions
 import { differenceInCalendarDays } from "date-fns";
 import { runPredictionAndStoreFact } from "@/lib/actions/predict";
 import { tierLimit, type Tier } from "@/lib/tiers";
+import { calcBmi } from "@/lib/bmi";
 import { triage, triagePreamble } from "@/lib/triage";
 import { preCheck, withDisclaimer, INDIA_EMERGENCY } from "@/lib/safety";
 import { scrubPhi, scrubResponse } from "@/lib/phi-scrubber";
@@ -173,6 +174,28 @@ export async function POST(req: NextRequest) {
   const { phase: cyclePhase, cycleDay: normalizedDay } = computeCyclePhase(cycleDay);
 
   const todayLog = recentLogs[0];
+
+  // Pull recent PCOS / symptom screens so AI sees prior assessment context
+  const recentScreens = await prisma.symptomLog.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    select: { category: true, data: true, aiInsight: true, createdAt: true },
+  });
+
+  // Compute BMI if both vitals are present — saves the AI a round-trip
+  let bmiValue: number | null = null;
+  let bmiCategory: string | null = null;
+  if (user.height && user.weight) {
+    try {
+      const r = calcBmi(user.height, user.weight);
+      bmiValue = r.bmi;
+      bmiCategory = r.label;
+    } catch {
+      // Heights/weights out of range — fall through with nulls
+    }
+  }
+
   const phasePayload: PhasePayload = {
     name: user.name ?? null,
     age: user.age ?? null,
@@ -183,6 +206,21 @@ export async function POST(req: NextRequest) {
     trimester: computeTrimester(user.pregnancyWeek ?? null),
     cyclePhase,
     cycleDay: normalizedDay,
+    vitals: {
+      heightCm: user.height ?? null,
+      weightKg: user.weight ?? null,
+      bmi: bmiValue,
+      bmiCategory,
+      sleepHours: user.sleepDuration ?? null,
+      movementMinPerDay: user.movementDuration ?? null,
+      physicalActivity: user.physicalActivity ?? null,
+      supplements: user.supplements ?? null,
+      previousPregnancies: user.previousPregnancies ?? null,
+      smokeAlcohol: user.smokeAlcohol ?? null,
+      friedFoods: user.friedFoods ?? null,
+      sugaryFoods: user.sugaryFoods ?? null,
+      waterIntakeL: user.waterIntake ?? null,
+    },
     targets: computeTargets({
       age: user.age ?? null,
       lifeStage: user.lifeStage ?? user.pregnancyStage ?? null,
@@ -191,9 +229,28 @@ export async function POST(req: NextRequest) {
     lastLog: {
       waterGlasses: todayLog?.waterGlasses ?? 0,
       mood: todayLog?.mood ?? null,
-      activity: null, // PrismaJson field; left null for v1
+      activity: user.physicalActivity ?? null,
     },
+    recentMeals: recentLogs.map((l) => ({
+      date: l.date.toISOString().slice(0, 10),
+      meals: typeof l.meals === "string" ? JSON.parse(l.meals) : l.meals,
+      symptoms: typeof l.symptoms === "string" ? JSON.parse(l.symptoms) : l.symptoms,
+    })),
+    recentScreens: recentScreens.map((s) => {
+      const d = s.data as { risk?: string } | null;
+      return {
+        category: s.category,
+        risk: d?.risk ?? null,
+        insight: s.aiInsight,
+        date: s.createdAt.toISOString().slice(0, 10),
+      };
+    }),
     flaggedFindings: relevantMemories.filter((m: string) => m.includes("[REPORT FINDING")),
+    reportSummaries: latestReports.map((r) => ({
+      fileName: r.fileName,
+      analyzedAt: r.analyzedAt?.toISOString().slice(0, 10) ?? null,
+      summary: r.aiAnalysis ?? "",
+    })),
   };
 
   // ── Match condition knowledge against user's message ──

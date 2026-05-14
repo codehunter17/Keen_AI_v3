@@ -9,7 +9,7 @@ export const metadata = { title: "Achievements · NutriMama" };
 
 export default async function BadgesPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
   await checkAndAwardBadges().catch(() => {});
   const all = await getMyBadges();
   const earned = all.filter((b) => b.earned);

@@ -9,7 +9,7 @@ export const metadata = { title: "Self-care · NutriMama" };
 
 export default async function SelfcarePage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
   const u = await prisma.user.findUnique({
     where: { id: s.user.id },
     select: { lifeStage: true, cycleStage: true },

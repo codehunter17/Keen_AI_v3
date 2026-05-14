@@ -8,7 +8,7 @@ export const metadata = { title: "Inbox · NutriMama" };
 
 export default async function InboxPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
   const list = await listNotifications();
   return (
     <InboxClient

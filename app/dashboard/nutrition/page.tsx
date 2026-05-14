@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getNutritionPlan } from "@/lib/actions/nutrition";
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
-import { Info, AlertCircle, Apple, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Info, AlertCircle, Apple, Sparkles, Lock } from "lucide-react";
 import { pickDaily, DAILY_NUTRIENT_FOCUS } from "@/lib/daily";
+import { isTierLockError, isQuotaError } from "@/lib/errors";
 
 export default function NutritionPage() {
   const [activeDay, setActiveDay] = useState(1);
@@ -13,7 +15,16 @@ export default function NutritionPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["nutritionPlan"],
     queryFn: async () => await getNutritionPlan(),
+    // Don't retry paywall errors — they won't resolve without an upgrade.
+    retry: (failureCount, err) => {
+      if (isTierLockError(err) || isQuotaError(err)) return false;
+      return failureCount < 1;
+    },
   });
+
+  // Tier-locked → render a paywall instead of crashing or spinning forever.
+  const isTierLocked = isTierLockError(error);
+  const isQuotaExceeded = isQuotaError(error);
 
   if (isLoading) {
     return (
@@ -26,10 +37,55 @@ export default function NutritionPage() {
     );
   }
 
+  // Paywall — Free tier user, no meal plans access. Show the daily nutrient
+  // strip as a sample of value, then prompt upgrade.
+  if (isTierLocked || isQuotaExceeded) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 px-5 pb-16">
+        {/* Still show the rotating focus nutrient — gives Free users value */}
+        <NutrientFocusStrip focus={focus} />
+
+        <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-secondary/5 to-gold/5 p-6 sm:p-10 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="font-heading text-2xl sm:text-3xl text-foreground">
+            {isQuotaExceeded ? "You've used this month's meal plans" : "Personalized meal plans"}
+          </h2>
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+            {isQuotaExceeded
+              ? "You're on Care (4 plans per month). Upgrade to Pro for unlimited weekly regenerations."
+              : "AI-generated 7-day meal plans, regional & cycle-aware, with ICMR-NIN nutrient targets. Care includes 4 plans / month, Pro is unlimited."}
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:scale-[1.02] transition shadow-lg"
+          >
+            View plans →
+          </Link>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Care from ₹49/mo · cancel anytime
+          </p>
+        </div>
+
+        {/* Generic guidance any tier can use — keeps page useful, not empty */}
+        <div className="rounded-2xl bg-card border border-border p-5">
+          <h3 className="font-heading text-lg mb-2">Free guidance you can use today</h3>
+          <ul className="text-sm text-foreground/80 space-y-2 leading-relaxed">
+            <li>• Aim for one fistful of greens at lunch <em>and</em> dinner.</li>
+            <li>• Pair iron sources (chana, methi, gur) with lemon/amla — doubles absorption.</li>
+            <li>• Drink water 30 min <em>before</em> meals, not during, for better digestion.</li>
+            <li>• Last meal at least 2 hours before bed → better sleep + blood-sugar control.</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !data) {
     return (
       <div className="text-center mt-20 text-destructive">
-        Error loading nutrition plan.
+        Could not load your nutrition plan. Try again in a moment.
       </div>
     );
   }
@@ -39,38 +95,7 @@ export default function NutritionPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 px-5 pb-10">
-      {/* Daily nutrient-of-the-day strip — rotates every UTC midnight */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-primary/20 bg-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-      >
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">
-              Today&apos;s focus nutrient
-            </p>
-            <p className="font-heading text-xl text-foreground mt-0.5">
-              {focus.nutrient}
-              <span className="text-sm text-muted-foreground font-normal ml-2">
-                target {focus.target}
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 leading-snug">
-              {focus.why}
-            </p>
-          </div>
-        </div>
-        <div className="text-xs sm:text-right text-foreground/80 sm:max-w-[240px]">
-          <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-1">
-            Get it from
-          </p>
-          {focus.sources}
-        </div>
-      </motion.div>
+      <NutrientFocusStrip focus={focus} />
 
       {/* Milestone Banner */}
       <motion.div
@@ -224,5 +249,48 @@ export default function NutritionPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Reusable focus-nutrient strip — shown both on the full meal-plan page
+// AND the Free-tier paywall, so day-zero users still get one piece of
+// daily value here.
+function NutrientFocusStrip({
+  focus,
+}: {
+  focus: { nutrient: string; target: string; sources: string; why: string };
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-primary/20 bg-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-primary">
+            Today&apos;s focus nutrient
+          </p>
+          <p className="font-heading text-xl text-foreground mt-0.5">
+            {focus.nutrient}
+            <span className="text-sm text-muted-foreground font-normal ml-2">
+              target {focus.target}
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 leading-snug">
+            {focus.why}
+          </p>
+        </div>
+      </div>
+      <div className="text-xs sm:text-right text-foreground/80 sm:max-w-[240px]">
+        <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground mb-1">
+          Get it from
+        </p>
+        {focus.sources}
+      </div>
+    </motion.div>
   );
 }

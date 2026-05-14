@@ -11,18 +11,28 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AlertCircle } from "lucide-react";
 import { Loader } from "@/components/ui/loader";
 
+// Disposable / fake-looking domains the user might type into the signup
+// form. Mirrors lib/email-blocklist.ts (kept short here to avoid bloating
+// the client bundle). Real defence is server-side; this is just for instant
+// in-form feedback so the user doesn't wait for a round-trip to learn.
+const CLIENT_DISPOSABLE_HINT = /^(.+@)(mailinator|guerrillamail|10minutemail|tempmail|sharklasers|yopmail|throwawaymail|trashmail|getnada|maildrop|fakemail|tempinbox|dispostable|emailondeck|mailcatch|harakirimail|spam4|moakt)\./i;
+
 export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const googleSocialEnabled = isGoogleSocialEnabled;
 
   useEffect(() => {
-    if (session) {
+    // Only auto-redirect if we already have an existing session — don't
+    // redirect right after signup since the user must verify their email
+    // first.
+    if (session && !signupComplete) {
       const user = session.user as { pregnancyStage?: string };
       if (!user.pregnancyStage) {
         router.push("/onboarding");
@@ -30,20 +40,31 @@ export default function SignUpPage() {
         router.push("/dashboard");
       }
     }
-  }, [session, router]);
+  }, [session, signupComplete, router]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const trimmedEmail = email.trim().toLowerCase();
+    // Client-side guard against obviously-disposable domains. Server runs
+    // the full check too — this just saves a network round-trip.
+    if (CLIENT_DISPOSABLE_HINT.test(trimmedEmail)) {
+      setError(
+        "Please use a real email — disposable / throwaway addresses aren't supported. We send a verification link.",
+      );
+      return;
+    }
     setLoading(true);
     await signUp.email({
-      email,
+      email: trimmedEmail,
       password,
       name,
       fetchOptions: {
         onSuccess: () => {
           setLoading(false);
-          router.push("/onboarding");
+          // Don't redirect — show "check your email" UI. Account exists
+          // but is unverified, so dashboard would just bounce them back.
+          setSignupComplete(true);
         },
         onError: (ctx) => {
           setLoading(false);
@@ -62,6 +83,59 @@ export default function SignUpPage() {
   }
 
   if (session) return null;
+
+  // Post-signup state: account is created but unverified. Better Auth has
+  // sent the verification email; the user must click the link before they
+  // can sign in. Show a clear "check your inbox" card instead of bouncing
+  // them back to the empty form.
+  if (signupComplete) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="absolute top-8 right-8">
+          <ThemeToggle />
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md rounded-2xl bg-card p-8 shadow-xl backdrop-blur-xl border border-white/20 text-center"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 text-3xl">
+            ✉
+          </div>
+          <h1 className="text-2xl font-heading text-primary mb-2">
+            Check your inbox
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            We just sent a verification link to{" "}
+            <strong className="text-foreground">{email}</strong>. Click it to
+            activate your account — then come back here to sign in.
+          </p>
+          <p className="text-xs text-muted-foreground mt-6">
+            Didn&apos;t arrive? Check spam, or wait 2 minutes and{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setSignupComplete(false);
+                setEmail("");
+                setPassword("");
+                setName("");
+              }}
+              className="text-primary underline"
+            >
+              try again
+            </button>
+            .
+          </p>
+          <Link
+            href="/auth/sign-in"
+            className="mt-6 inline-block text-sm text-primary hover:underline"
+          >
+            Already verified? Sign in →
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

@@ -10,7 +10,7 @@ export const metadata = { title: "Cycle · NutriMama" };
 
 export default async function CyclePage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
 
   const user = await prisma.user.findUnique({
     where: { id: s.user.id },

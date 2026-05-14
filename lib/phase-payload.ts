@@ -9,6 +9,7 @@
 //   - Standard fertility cycle math (28-day average, 14-day luteal, 6-day fertile window)
 
 import { ICMR_RDA } from "@/lib/medical-kb";
+import { calcBmi } from "@/lib/bmi";
 
 export type CyclePhase =
   | "MENSTRUAL"     // days 1-5
@@ -29,6 +30,22 @@ export interface PhasePayload {
   trimester: "T1" | "T2" | "T3" | null;
   cyclePhase: CyclePhase;
   cycleDay: number | null;
+  // Vitals — passed straight from the User record so the AI never has to ask
+  vitals: {
+    heightCm: number | null;
+    weightKg: number | null;
+    bmi: number | null;
+    bmiCategory: string | null;
+    sleepHours: number | null;
+    movementMinPerDay: number | null;
+    physicalActivity: string | null;       // "low" | "moderate" | "high"
+    supplements: string | null;
+    previousPregnancies: number | null;
+    smokeAlcohol: string | null;
+    friedFoods: string | null;
+    sugaryFoods: string | null;
+    waterIntakeL: number | null;           // self-reported habitual intake
+  };
   // Calculated ICMR-NIN nutrient targets
   targets: {
     iron_mg: number | null;
@@ -44,8 +61,27 @@ export interface PhasePayload {
     mood: string | null;
     activity: string | null;
   };
+  // Recent meals (last 3 days) so AI can answer "what did I eat today"
+  recentMeals: {
+    date: string;
+    meals: unknown;            // raw JSON shape — AI can read it
+    symptoms: unknown;
+  }[];
+  // Recent symptom screens (PCOS, etc.) keyed by category
+  recentScreens: {
+    category: string;          // e.g. "PCOS"
+    risk: string | null;       // LOW/MODERATE/HIGH
+    insight: string | null;
+    date: string;
+  }[];
   // Recent flagged report findings (verbatim from RAG)
   flaggedFindings: string[];
+  // Full report summaries for richer Q&A about uploaded reports
+  reportSummaries: {
+    fileName: string;
+    analyzedAt: string | null;
+    summary: string;
+  }[];
 }
 
 export function computeTrimester(week: number | null): "T1" | "T2" | "T3" | null {
@@ -131,15 +167,57 @@ export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
   };
 }
 
-/** Render the payload as a compact JSON block embedded in the system prompt. */
+/** Render the payload as a compact text block embedded in the system prompt.
+ *  Reading guide for the LLM is hardcoded into the directives — every field
+ *  below is something the AI is allowed to use directly without asking the
+ *  user. If a value is "not_recorded" the AI may suggest the user log it. */
 export function payloadToSystemContext(p: PhasePayload): string {
   const targetsLines = Object.entries(p.targets)
     .filter(([, v]) => v != null)
     .map(([k, v]) => `  ${k}: ${v}`)
     .join("\n");
 
+  const v = p.vitals;
+  const vitalsLines = [
+    `  height_cm: ${v.heightCm ?? "not_recorded"}`,
+    `  weight_kg: ${v.weightKg ?? "not_recorded"}`,
+    v.bmi != null
+      ? `  bmi: ${v.bmi} (${v.bmiCategory ?? "unclassified"})`
+      : "  bmi: not_recorded",
+    `  sleep_hours_typical: ${v.sleepHours ?? "not_recorded"}`,
+    `  movement_min_per_day: ${v.movementMinPerDay ?? "not_recorded"}`,
+    `  physical_activity_level: ${v.physicalActivity ?? "not_recorded"}`,
+    `  habitual_water_L: ${v.waterIntakeL ?? "not_recorded"}`,
+    `  supplements: ${v.supplements ?? "none recorded"}`,
+    `  previous_pregnancies: ${v.previousPregnancies ?? "not_recorded"}`,
+    `  smoke_or_alcohol: ${v.smokeAlcohol ?? "not_recorded"}`,
+    `  fried_foods_freq: ${v.friedFoods ?? "not_recorded"}`,
+    `  sugary_foods_freq: ${v.sugaryFoods ?? "not_recorded"}`,
+  ].join("\n");
+
   const findings = p.flaggedFindings.length
     ? p.flaggedFindings.map((f) => `  - ${f}`).join("\n")
+    : "  - none";
+
+  const reportSection = p.reportSummaries.length
+    ? p.reportSummaries
+        .map(
+          (r) =>
+            `  - ${r.fileName} (${r.analyzedAt ?? "no date"}):\n      ${r.summary.replace(/\n+/g, " ").slice(0, 400)}${r.summary.length > 400 ? "…" : ""}`,
+        )
+        .join("\n")
+    : "  - none uploaded yet";
+
+  const mealsSection = p.recentMeals.length
+    ? p.recentMeals
+        .map((m) => `  - ${m.date}: meals=${JSON.stringify(m.meals)} symptoms=${JSON.stringify(m.symptoms)}`)
+        .join("\n")
+    : "  - none logged in last 3 days";
+
+  const screensSection = p.recentScreens.length
+    ? p.recentScreens
+        .map((s) => `  - ${s.category} (${s.date}): risk=${s.risk ?? "?"} — ${s.insight?.slice(0, 200) ?? ""}`)
+        .join("\n")
     : "  - none";
 
   return [
@@ -149,16 +227,28 @@ export function payloadToSystemContext(p: PhasePayload): string {
     `diet: ${p.diet ?? "unknown"}`,
     `region: ${p.region ?? "Indian"}`,
     `life_stage: ${p.lifeStage ?? "unknown"}`,
-    p.lifeStage === "PREGNANT" ? `trimester: ${p.trimester ?? "?"} (week ${p.pregnancyWeek ?? "?"})` : "",
-    p.cyclePhase !== "UNKNOWN" ? `cycle_phase: ${p.cyclePhase} (day ${p.cycleDay})` : "",
+    p.lifeStage === "PREGNANT"
+      ? `trimester: ${p.trimester ?? "?"} (week ${p.pregnancyWeek ?? "?"})`
+      : "",
+    p.cyclePhase !== "UNKNOWN"
+      ? `cycle_phase: ${p.cyclePhase} (day ${p.cycleDay})`
+      : "",
+    "VITALS_AND_LIFESTYLE:",
+    vitalsLines,
     "ICMR_NIN_2020_DAILY_TARGETS:",
     targetsLines,
-    "LAST_LOG:",
+    "LAST_LOG_TODAY:",
     `  water_glasses_today: ${p.lastLog.waterGlasses}`,
     `  mood: ${p.lastLog.mood ?? "not logged"}`,
     `  activity: ${p.lastLog.activity ?? "not logged"}`,
+    "RECENT_MEALS_AND_SYMPTOMS:",
+    mealsSection,
+    "RECENT_SCREENS:",
+    screensSection,
     "FLAGGED_REPORT_FINDINGS:",
     findings,
+    "UPLOADED_REPORTS_SUMMARY:",
+    reportSection,
   ]
     .filter(Boolean)
     .join("\n");
@@ -170,6 +260,26 @@ export const HYPER_PERSONALIZATION_DIRECTIVES = `
 You are NutriMama — the core reasoning and advisory engine for an Indian women's health platform.
 You speak DIRECTLY to the user. You behave like a top-tier OB-GYN + nutritionist who has
 intimately reviewed her chart.
+
+USE THE USER_PAYLOAD — DO NOT ASK FOR DATA YOU ALREADY HAVE.
+
+Every reply MUST consult USER_PAYLOAD first. If a value is present, USE IT — do not ask
+the user to provide it. Examples:
+
+  • USER_PAYLOAD has height_cm and weight_kg → just state BMI directly. The payload
+    even computes it for you under \`bmi:\`. Never reply "I need your height and weight."
+  • USER_PAYLOAD has cycle_phase → answer in that phase context.
+  • UPLOADED_REPORTS_SUMMARY has report text → reference findings by name. Do not say
+    "I don't have access to your reports" unless that section reads "none uploaded yet."
+  • RECENT_MEALS_AND_SYMPTOMS has today's logs → answer "what did I eat today" by
+    citing the actual logged meals.
+  • RECENT_SCREENS has PCOS results → reference the risk level + insight already there.
+
+If a specific field is "not_recorded", you MAY ask the user to log it — but suggest the
+exact dashboard route (e.g. "log weight in Profile → Vitals") rather than just demanding it.
+
+NEVER say "your USER_PAYLOAD does not contain X" to the user. That's internal jargon.
+Say "I don't have your X on file yet — want to log it in Settings?" instead.
 
 CORE BEHAVIOR — "HELP FIRST"
 

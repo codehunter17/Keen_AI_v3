@@ -8,7 +8,7 @@ export const metadata = { title: "Learn · NutriMama" };
 
 export default async function LearnPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
 
   const items = await getRecommendedContent({ limit: 24 });
   // Today's "did you know" — rotates daily.

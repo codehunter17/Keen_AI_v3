@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, verificationEmail } from "@/lib/email";
+import { isDisposableEmail, looksFake } from "@/lib/email-blocklist";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -54,6 +56,24 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    // Block sign-in until the email is verified. Prevents fake / typo /
+    // throwaway email signups from reaching the dashboard.
+    requireEmailVerification: true,
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      // Block disposable / obviously-fake addresses before sending. Better
+      // Auth has already created the user row at this point — they'll just
+      // never receive an email and never be able to verify, which is fine.
+      if (isDisposableEmail(user.email) || looksFake(user.email)) {
+        console.warn(`[auth] refused to send verification to suspicious address: ${user.email}`);
+        return;
+      }
+      const tmpl = verificationEmail({ name: user.name, verifyUrl: url });
+      await sendEmail({ ...tmpl, to: user.email });
+    },
   },
   socialProviders: isGoogleSocialConfigured
     ? {

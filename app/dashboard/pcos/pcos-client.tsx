@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
+import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { submitPcosScreen } from "@/lib/actions/cycle";
+import { isPaywallError, getErrorMessage } from "@/lib/errors";
 
 const QUESTIONS = [
   { key: "irregularPeriods", q: "Are your periods irregular (cycles longer than 35 days, or skipping months)?" },
@@ -28,17 +31,57 @@ export function PcosScreenClient() {
     risk: "LOW" | "MODERATE" | "HIGH";
     insight: string;
   }>(null);
+  const [paywall, setPaywall] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const allAnswered = QUESTIONS.every((q) => answers[q.key] !== null);
 
   const submit = () =>
     startTransition(async () => {
+      setError(null);
+      setPaywall(null);
       const payload = Object.fromEntries(
         QUESTIONS.map((q) => [q.key, answers[q.key] ?? false]),
       );
-      const res = await submitPcosScreen(payload as Record<Key, boolean>);
-      setResult(res);
+      try {
+        const res = await submitPcosScreen(payload as Record<Key, boolean>);
+        setResult(res);
+      } catch (e) {
+        // PCOS screening is a Care/Pro feature. Free users see paywall
+        // instead of an uncaught exception that breaks the page.
+        if (isPaywallError(e)) {
+          setPaywall(getErrorMessage(e));
+        } else {
+          setError(getErrorMessage(e) || "Could not submit your answers. Please try again.");
+        }
+      }
     });
+
+  if (paywall) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-secondary/5 to-gold/5 p-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h1 className="font-heading text-2xl text-foreground">
+            PCOS screening
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+            A 9-question Rotterdam-criteria-based screen with personalised
+            insight. It&apos;s a Care/Pro feature — Care from ₹49/mo unlocks
+            this plus medical-report analysis, meal plans, and risk prediction.
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:scale-[1.02] transition shadow-lg"
+          >
+            View plans →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (result) {
     const colorClass =
@@ -116,6 +159,12 @@ export function PcosScreenClient() {
           </div>
         ))}
       </div>
+
+      {error && (
+        <div className="mt-3 rounded-xl bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="mt-4 flex justify-end">
         <Button onClick={submit} disabled={!allAnswered || pending}>

@@ -40,12 +40,24 @@ export default function SignInPage() {
         },
         onError: (ctx) => {
           setLoading(false);
-          if (ctx.error.status === 401) {
+          const msg = ctx.error.message ?? "";
+          const code = (ctx.error as { code?: string }).code ?? "";
+          // Better Auth signals an unverified email account on sign-in
+          // attempt — surface a clear message + offer to resend.
+          if (
+            code === "EMAIL_NOT_VERIFIED" ||
+            msg.toLowerCase().includes("verify") ||
+            msg.toLowerCase().includes("not verified")
+          ) {
+            setError(
+              "Your email isn't verified yet. Check your inbox for the link we sent, or click below to resend.",
+            );
+          } else if (ctx.error.status === 401) {
             setError(
               "Invalid email or password. Please check your spelling or sign up below.",
             );
           } else {
-            setError(ctx.error.message || "Something went wrong. Please try again.");
+            setError(msg || "Something went wrong. Please try again.");
           }
         },
       },

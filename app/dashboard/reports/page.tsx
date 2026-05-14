@@ -8,6 +8,7 @@ import {
   deleteReport,
 } from "@/lib/actions/reports";
 import { InlineReportUploader } from "@/components/inline-report-uploader";
+import { isPaywallError } from "@/lib/errors";
 import { motion, AnimatePresence } from "motion/react";
 import {
   FileText,
@@ -57,10 +58,10 @@ export default function ReportsPage() {
     onError: (error: { message?: string }) => {
       setAnalyzingId(null);
       const msg = error.message || "Analysis failed";
-      if (
-        msg.toLowerCase().includes("limit") ||
-        msg.toLowerCase().includes("tier")
-      ) {
+      // Treat any tier-lock OR quota-exceeded as the "upgrade" modal.
+      // Old check only matched "limit"/"tier" and missed our newer
+      // "Care/Pro feature" / "Upgrade to unlock" wording.
+      if (isPaywallError(error)) {
         setLimitError(msg);
         setShowLimitModal(true);
       } else {

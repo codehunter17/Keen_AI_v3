@@ -32,7 +32,7 @@ export default function LandingPageClient({
   const ctaHref = session ? "/dashboard" : "/auth/sign-up";
   const ctaLabel = session
     ? t("Open NutriMama", "NutriMama खोलें")
-    : t("Start free — no card", "मुफ्त शुरू करें");
+    : t("Start free", "मुफ्त शुरू करें");
 
   return (
     <>

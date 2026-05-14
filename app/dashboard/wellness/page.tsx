@@ -14,7 +14,7 @@ export const metadata = { title: "Wellness · NutriMama" };
 
 export default async function WellnessPage() {
   const s = await auth.api.getSession({ headers: await headers() });
-  if (!s) redirect("/auth/login");
+  if (!s) redirect("/auth/sign-in");
 
   const [bmi, hydration, streak, weekly, contacts] = await Promise.all([
     computeBmi(),

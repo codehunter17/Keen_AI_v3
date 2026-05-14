@@ -1,12 +1,11 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Calendar,
   MessageSquare,
   FileText,
   User,
@@ -19,6 +18,8 @@ import {
   Leaf,
   Inbox,
   Apple,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TierBadge } from "@/components/tier-badge";
@@ -41,10 +42,28 @@ const NAV_ITEMS = [
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
+// Mobile bottom nav shows only the 4 most-used destinations + a "More"
+// button. Anything not in this list lives in the More sheet.
+const MOBILE_PRIMARY_HREFS = new Set([
+  "/dashboard",
+  "/dashboard/cycle",
+  "/dashboard/chat",
+  "/dashboard/meals",
+]);
+const MOBILE_PRIMARY = NAV_ITEMS.filter((i) => MOBILE_PRIMARY_HREFS.has(i.href));
+const MOBILE_SECONDARY = NAV_ITEMS.filter((i) => !MOBILE_PRIMARY_HREFS.has(i.href));
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+
+  // Close the More sheet whenever we navigate (a tap inside the sheet
+  // changes pathname, so this also handles "tap, close, navigate").
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -154,27 +173,100 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Navigation (Bottom) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 border-t border-border bg-white/90 dark:bg-background/90 backdrop-blur-xl md:hidden px-4 no-print">
-        {NAV_ITEMS.map((item) => {
+      {/* Mobile Navigation — 4 primary tabs + More. Anything beyond the
+          four lives in the slide-up sheet so labels never collide. */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 border-t border-border bg-white/95 dark:bg-background/95 backdrop-blur-xl md:hidden no-print pb-[env(safe-area-inset-bottom)]">
+        {MOBILE_PRIMARY.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center space-y-1 transition-all",
+                "flex flex-1 flex-col items-center justify-center gap-1 transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground",
               )}
             >
-              <item.icon className={cn("h-5 w-5", isActive && "scale-110")} />
-              <span className="text-[10px] font-bold uppercase tracking-tighter">
-                {item.label.split(" ")[0]}
+              <item.icon className={cn("h-5 w-5", isActive && "scale-110 transition-transform")} />
+              <span className="text-[10px] font-semibold tracking-wide">
+                {item.label}
               </span>
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setMobileMoreOpen((v) => !v)}
+          aria-expanded={mobileMoreOpen}
+          aria-label="More"
+          className={cn(
+            "flex flex-1 flex-col items-center justify-center gap-1 transition-colors",
+            mobileMoreOpen
+              ? "text-primary"
+              : MOBILE_SECONDARY.some((i) => i.href === pathname)
+                ? "text-primary"
+                : "text-muted-foreground",
+          )}
+        >
+          <MoreHorizontal className="h-5 w-5" />
+          <span className="text-[10px] font-semibold tracking-wide">More</span>
+        </button>
       </nav>
+
+      {/* Mobile "More" sheet — slides up from the bottom, lists everything
+          not on the primary nav. Tapping anywhere outside dismisses. */}
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden no-print">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm animate-in fade-in"
+            onClick={() => setMobileMoreOpen(false)}
+          />
+          {/* Sheet */}
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-3xl shadow-2xl pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 px-5 animate-in slide-in-from-bottom"
+            role="dialog"
+            aria-label="More navigation"
+          >
+            {/* Grab handle */}
+            <div className="w-10 h-1 rounded-full bg-border mx-auto mb-3" />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading text-lg text-foreground">More</h2>
+              <button
+                type="button"
+                onClick={() => setMobileMoreOpen(false)}
+                aria-label="Close"
+                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {MOBILE_SECONDARY.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border transition-all",
+                      isActive
+                        ? "bg-primary/10 border-primary/30 text-primary"
+                        : "bg-card border-border hover:bg-muted text-foreground",
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-xs font-medium text-center">
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <DailyCheckIn />
     </div>
   );
