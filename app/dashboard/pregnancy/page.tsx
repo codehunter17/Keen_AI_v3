@@ -16,6 +16,7 @@ import {
 } from "@/lib/fetal-weeks";
 import { CitationBadge, CitationGroup, SourceFooter } from "@/components/citation-badge";
 import { Ruler, Sparkles, ClipboardList, AlertTriangle, MessageSquare, Calendar } from "lucide-react";
+import { StartPregnancyPanel } from "./start-pregnancy";
 
 export const metadata = { title: "Pregnancy · NutriMama" };
 
@@ -47,9 +48,10 @@ export default async function PregnancyPage() {
 
   if (!user) redirect("/dashboard");
 
-  // Gate: only PREGNANT users see this view. Others get nudged to update.
+  // Gate: only PREGNANT users see the clinical view. Everyone else gets
+  // the "Start pregnancy tracking" panel inline (no bouncing to Settings).
   if (user.pregnancyStage !== "PREGNANT") {
-    return <NotPregnantState lifeStage={user.lifeStage} />;
+    return <StartPregnancyPanel />;
   }
 
   const week = Math.max(1, Math.min(40, user.pregnancyWeek ?? 1));
@@ -275,29 +277,8 @@ export default async function PregnancyPage() {
   );
 }
 
-function NotPregnantState({ lifeStage }: { lifeStage: string | null }) {
-  return (
-    <div className="max-w-xl mx-auto p-6 text-center">
-      <div className="rounded-3xl bg-card border border-dashed border-border p-8">
-        <div className="text-5xl mb-3" aria-hidden>🌱</div>
-        <h1 className="font-heading text-2xl text-primary mb-2">
-          Pregnancy tracking
-        </h1>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {lifeStage === "TRYING_TO_CONCEIVE"
-            ? "When you confirm a pregnancy, switch your tracking mode in Settings and we'll unlock the full 40-week clinical guide here."
-            : "You're not currently tracking a pregnancy. If that changes, switch your tracking mode in Settings."}
-        </p>
-        <Link
-          href="/dashboard/settings"
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold hover:scale-[1.02] transition"
-        >
-          Open Settings →
-        </Link>
-      </div>
-    </div>
-  );
-}
+// (NotPregnantState removed — replaced by inline <StartPregnancyPanel />
+//  so users start tracking right here, no bounce to Settings.)
 
 // Helper: turn "< 12 weeks", "20 weeks", "26 weeks" into a numeric upper bound
 function parseWeekFromTiming(timing: string): number {

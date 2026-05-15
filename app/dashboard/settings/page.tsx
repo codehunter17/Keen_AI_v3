@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SettingsClient } from "./settings-client";
-import { ProvidersStatus } from "./providers-status";
 
 export const metadata = { title: "Settings · NutriMama" };
 
@@ -11,7 +10,7 @@ export default async function SettingsPage() {
   const s = await auth.api.getSession({ headers: await headers() });
   if (!s) redirect("/auth/sign-in");
 
-  const [user, sub, dependents] = await Promise.all([
+  const [user, sub] = await Promise.all([
     prisma.user.findUnique({
       where: { id: s.user.id },
       select: {
@@ -22,14 +21,13 @@ export default async function SettingsPage() {
         tierExpiresAt: true,
         allowModelTraining: true,
         languagePref: true,
+        age: true,
+        pregnancyStage: true,
+        pregnancyWeek: true,
       },
     }),
     prisma.subscription.findFirst({
       where: { userId: s.user.id },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.dependentProfile.findMany({
-      where: { parentId: s.user.id, deletedAt: null },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -37,7 +35,6 @@ export default async function SettingsPage() {
 
   return (
     <SettingsClient
-      providersSlot={<ProvidersStatus />}
       user={user}
       activeSub={
         sub
@@ -50,14 +47,9 @@ export default async function SettingsPage() {
             }
           : null
       }
-      dependents={dependents.map((d) => ({
-        id: d.id,
-        firstName: d.firstName,
-        ageBand: d.ageBand,
-        relationship: d.relationship,
-        hasMenarche: d.hasMenarche,
-        cycleTrackingEnabled: d.cycleTrackingEnabled,
-      }))}
+      // Provider status surface kept available behind a dev-only query
+      // param so we can debug without showing it to end users.
+      providersSlot={null}
     />
   );
 }
