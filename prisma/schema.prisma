@@ -416,6 +416,9 @@ model DailyLog {
   otherFluids  Json?
   activity     String?
   mood         String?
+  // Structured payload from the morning 4-step Daily Check-in
+  // { mealsPlanned, supplements, waterTargetL, symptoms, completedAt }
+  checkin      Json?
   createdAt    DateTime @default(now())
 
   @@map("daily_log")

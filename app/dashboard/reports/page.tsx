@@ -51,16 +51,21 @@ export default function ReportsPage() {
     onMutate: (variables) => {
       setAnalyzingId(variables.id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    onSuccess: (result) => {
+      // analyzeReport now returns a discriminated union so paywall
+      // detection survives Next.js production error-masking.
       setAnalyzingId(null);
+      if (result.kind === "paywall") {
+        setLimitError(result.message);
+        setShowLimitModal(true);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
     onError: (error: { message?: string }) => {
       setAnalyzingId(null);
       const msg = error.message || "Analysis failed";
-      // Treat any tier-lock OR quota-exceeded as the "upgrade" modal.
-      // Old check only matched "limit"/"tier" and missed our newer
-      // "Care/Pro feature" / "Upgrade to unlock" wording.
+      // Legacy fallback if the action throws an unexpected error.
       if (isPaywallError(error)) {
         setLimitError(msg);
         setShowLimitModal(true);

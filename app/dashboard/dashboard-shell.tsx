@@ -31,6 +31,7 @@ import { Loader } from "@/components/ui/loader";
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Cycle", href: "/dashboard/cycle", icon: Heart },
+  { label: "Pregnancy", href: "/dashboard/pregnancy", icon: Heart },
   { label: "Wellness", href: "/dashboard/wellness", icon: Droplets },
   { label: "Meals", href: "/dashboard/meals", icon: Apple },
   { label: "Self-care", href: "/dashboard/selfcare", icon: Leaf },

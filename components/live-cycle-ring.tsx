@@ -64,7 +64,17 @@ export function LiveCycleRing({
   averageLength?: number;
   nextPeriodInDays?: number | null;
 }) {
+  // Two independent UI states:
+  //   • focused — sticky click selection. Set on tap, persists until the
+  //     user taps elsewhere (or taps the same chip again to clear).
+  //   • hovered — transient mouse-over preview. Cleared the moment the
+  //     cursor leaves; never overwrites a click selection.
+  //
+  // Display priority: hovered (most temporary) → focused (sticky) →
+  // currentPhase (default for today). This way hovering doesn't "lose"
+  // your click, and leaving with mouse doesn't snap back to today.
   const [focused, setFocused] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   // If we don't have a cycle day yet (new user), show a "log to begin" state.
   if (cycleDay == null) {
@@ -89,9 +99,16 @@ export function LiveCycleRing({
 
   const normalizedDay = ((cycleDay - 1) % 28) + 1;
   const currentPhase = dayToPhase(normalizedDay);
-  const displayPhase = focused
-    ? PHASES.find((p) => p.key === focused) ?? currentPhase
+  // Pick what to display: hover preview wins over sticky click, click wins
+  // over today's default. A phase chip click "sticks" until tapped again.
+  const activeKey = hovered ?? focused;
+  const displayPhase = activeKey
+    ? PHASES.find((p) => p.key === activeKey) ?? currentPhase
     : currentPhase;
+  // Has the user explicitly chosen a phase to inspect? (Either via click
+  // stick OR a current hover.) Drives whether we show the full blurb vs
+  // just the lead sentence for today.
+  const isInspecting = activeKey !== null;
 
   return (
     <div className="relative mx-auto w-full max-w-[340px] sm:max-w-[400px] aspect-square select-none">
@@ -174,11 +191,11 @@ export function LiveCycleRing({
                   strokeDasharray={`${dashLen} ${CIRCUMFERENCE}`}
                   strokeDashoffset={dashOffset}
                   style={{ cursor: "pointer" }}
-                  onClick={() =>
-                    setFocused(focused === p.key ? null : p.key)
-                  }
-                  onMouseEnter={() => setFocused(p.key)}
-                  onMouseLeave={() => setFocused(null)}
+                  // Click locks the selection (sticky). Hover only previews,
+                  // and never clears a click selection on leave.
+                  onClick={() => setFocused(focused === p.key ? null : p.key)}
+                  onMouseEnter={() => setHovered(p.key)}
+                  onMouseLeave={() => setHovered(null)}
                 />
               </g>
             );
@@ -245,39 +262,45 @@ export function LiveCycleRing({
           transition={{ duration: 0.4 }}
           className="text-[11px] sm:text-xs text-muted-foreground mt-3 leading-snug max-w-[200px]"
         >
-          {focused ? displayPhase.blurb : currentPhase.blurb.split(".")[0] + "."}
+          {isInspecting
+            ? displayPhase.blurb
+            : currentPhase.blurb.split(".")[0] + "."}
         </motion.p>
-        {!focused && nextPeriodInDays != null && nextPeriodInDays > 0 && (
+        {!isInspecting && nextPeriodInDays != null && nextPeriodInDays > 0 && (
           <p className="mt-3 text-[10px] uppercase tracking-widest text-muted-foreground">
             Period in {nextPeriodInDays}d
           </p>
         )}
       </div>
 
-      {/* Phase legend chips below — tap to focus a phase */}
+      {/* Phase legend chips below — tap to lock a phase, tap again to clear.
+          The "active" highlight shows whichever the user is currently
+          inspecting (hover or sticky click), so the visual matches what the
+          ring + center text are showing. */}
       <div className="absolute -bottom-2 left-0 right-0 flex flex-wrap justify-center gap-1.5 px-2">
-        {PHASES.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => setFocused(focused === p.key ? null : p.key)}
-            onMouseEnter={() => setFocused(p.key)}
-            onMouseLeave={() => setFocused(null)}
-            className={
-              "text-[10px] uppercase tracking-widest font-semibold rounded-full px-2.5 py-1 border transition-colors " +
-              (displayPhase.key === p.key
-                ? "border-transparent text-white"
-                : "border-border bg-card text-muted-foreground hover:text-foreground")
-            }
-            style={
-              displayPhase.key === p.key
-                ? { background: p.color }
-                : undefined
-            }
-          >
-            {p.label}
-          </button>
-        ))}
+        {PHASES.map((p) => {
+          const isActiveChip = displayPhase.key === p.key;
+          const isPinned = focused === p.key;
+          return (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setFocused(focused === p.key ? null : p.key)}
+              onMouseEnter={() => setHovered(p.key)}
+              onMouseLeave={() => setHovered(null)}
+              aria-pressed={isPinned}
+              className={
+                "text-[10px] uppercase tracking-widest font-semibold rounded-full px-2.5 py-1 border transition-colors " +
+                (isActiveChip
+                  ? "border-transparent text-white shadow-sm"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground")
+              }
+              style={isActiveChip ? { background: p.color } : undefined}
+            >
+              {p.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

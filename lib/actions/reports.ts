@@ -43,7 +43,26 @@ export async function getReports() {
   });
 }
 
-export async function analyzeReport(reportId: string, fileUrl: string) {
+// Discriminated return — paywalls become data, not exceptions. Next.js
+// production masks thrown error messages, so a `throw new Error("...Care/Pro feature...")`
+// reaches the client as a generic "Server Components render" string and
+// our `isPaywallError(err)` check fails. Returning an explicit shape
+// survives the masking. Same pattern as nutrition + PCOS server actions.
+export type AnalyzeReportResult =
+  | {
+      kind: "analysis";
+      analysis: string;
+      extracted: Record<string, unknown> | null;
+      flagged: unknown[] | null;
+      nutritionRisk: unknown;
+      provider: string;
+    }
+  | { kind: "paywall"; reason: "TIER_LOCKED" | "QUOTA_EXCEEDED"; message: string };
+
+export async function analyzeReport(
+  reportId: string,
+  fileUrl: string,
+): Promise<AnalyzeReportResult> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
 
@@ -57,9 +76,11 @@ export async function analyzeReport(reportId: string, fileUrl: string) {
   const monthlyLimit = tierLimit({ tier, isStaff: user.isStaff ?? false }, "reportAnalysesPerMonth");
 
   if (monthlyLimit === 0) {
-    throw new Error(
-      "Report analysis is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
-    );
+    return {
+      kind: "paywall",
+      reason: "TIER_LOCKED",
+      message: "Report analysis is a Care/Pro feature. Upgrade to unlock — visit /pricing.",
+    };
   }
   if (monthlyLimit !== Infinity) {
     const now = new Date();
@@ -72,9 +93,11 @@ export async function analyzeReport(reportId: string, fileUrl: string) {
     });
     if (used >= monthlyLimit) {
       const tierLabel = tier === "FREE" ? "Free" : tier === "CARE_49" ? "Care" : "Pro";
-      throw new Error(
-        `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tierLabel} plan. Upgrade for more — visit /pricing.`,
-      );
+      return {
+        kind: "paywall",
+        reason: "QUOTA_EXCEEDED",
+        message: `You've used your ${monthlyLimit} report analysis${monthlyLimit === 1 ? "" : "es"} for this month on the ${tierLabel} plan. Upgrade for more — visit /pricing.`,
+      };
     }
   }
 
@@ -226,9 +249,10 @@ export async function analyzeReport(reportId: string, fileUrl: string) {
     }
 
     return {
+      kind: "analysis" as const,
       analysis: displayMarkdown,
-      extracted,
-      flagged,
+      extracted: extracted as Record<string, unknown> | null,
+      flagged: flagged as unknown[] | null,
       nutritionRisk: nutritionRiskInsight,
       provider: usedProvider,
     };
