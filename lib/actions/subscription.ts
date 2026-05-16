@@ -27,49 +27,138 @@ const checkoutSchema = z.object({
   couponCode: z.string().optional(),
 });
 
-export async function createCheckoutOrder(input: z.infer<typeof checkoutSchema>) {
-  const user = await requireUser();
-  const data = checkoutSchema.parse(input);
+// Discriminated-union return so we never reach React's production
+// "An error occurred in the Server Components render" mask. Every error
+// path tells the user (and the dev console) what actually happened.
+export type CheckoutOrderResult =
+  | {
+      ok: true;
+      razorpayOrderId: string;
+      razorpayKeyId: string;
+      amountInPaise: number;
+      couponApplied: string | null;
+    }
+  | {
+      ok: false;
+      reason:
+        | "UNAUTHORIZED"
+        | "INVALID_INPUT"
+        | "RAZORPAY_NOT_CONFIGURED"
+        | "RAZORPAY_NOT_ACTIVATED"
+        | "RAZORPAY_ERROR"
+        | "DB_ERROR";
+      message: string;
+    };
+
+export async function createCheckoutOrder(
+  input: z.infer<typeof checkoutSchema>,
+): Promise<CheckoutOrderResult> {
+  // 1. Auth — gracefully return instead of throwing.
+  const s = await auth.api.getSession({ headers: await headers() });
+  if (!s) {
+    return {
+      ok: false,
+      reason: "UNAUTHORIZED",
+      message: "Please sign in to upgrade.",
+    };
+  }
+  const user = s.user;
+
+  // 2. Validate input.
+  const parsed = checkoutSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: "INVALID_INPUT",
+      message: "Invalid plan selection.",
+    };
+  }
+  const data = parsed.data;
 
   let amount = TIER_PRICING[data.tier].priceInPaise;
   let coupon: { code: string; discount: number } | null = null;
 
-  if (data.couponCode) {
-    const c = await prisma.coupon.findUnique({
-      where: { code: data.couponCode.toUpperCase() },
-    });
-    if (
-      c &&
-      c.active &&
-      c.validFrom <= new Date() &&
-      c.validUntil >= new Date() &&
-      (!c.maxRedemptions || c.redeemedCount < c.maxRedemptions) &&
-      (!c.appliesToTier || c.appliesToTier === data.tier)
-    ) {
-      const discount = c.percentOff
-        ? Math.round((amount * c.percentOff) / 100)
-        : c.amountOffPaise ?? 0;
-      amount = Math.max(100, amount - discount); // never below ₹1
-      coupon = { code: c.code, discount };
+  try {
+    if (data.couponCode) {
+      const c = await prisma.coupon.findUnique({
+        where: { code: data.couponCode.toUpperCase() },
+      });
+      if (
+        c &&
+        c.active &&
+        c.validFrom <= new Date() &&
+        c.validUntil >= new Date() &&
+        (!c.maxRedemptions || c.redeemedCount < c.maxRedemptions) &&
+        (!c.appliesToTier || c.appliesToTier === data.tier)
+      ) {
+        const discount = c.percentOff
+          ? Math.round((amount * c.percentOff) / 100)
+          : c.amountOffPaise ?? 0;
+        amount = Math.max(100, amount - discount); // never below ₹1
+        coupon = { code: c.code, discount };
+      }
     }
+  } catch (err) {
+    console.error("[checkout] coupon lookup failed:", err);
+    return {
+      ok: false,
+      reason: "DB_ERROR",
+      message: "Could not verify your coupon. Please try without it.",
+    };
   }
 
-  const order = await createSubscriptionOrder({
-    userId: user.id,
-    amountInPaise: amount,
-    notes: {
-      tier: data.tier,
-      coupon: coupon?.code ?? "",
-    },
-  });
+  if (!process.env.RAZORPAY_KEY_ID) {
+    return {
+      ok: false,
+      reason: "RAZORPAY_NOT_CONFIGURED",
+      message:
+        "Payments are not configured. Please use a coupon code instead, or contact support.",
+    };
+  }
 
-  return {
-    ok: true as const,
-    razorpayOrderId: order.id,
-    razorpayKeyId: process.env.RAZORPAY_KEY_ID ?? "",
-    amountInPaise: amount,
-    couponApplied: coupon?.code ?? null,
-  };
+  try {
+    const order = await createSubscriptionOrder({
+      userId: user.id,
+      amountInPaise: amount,
+      notes: {
+        tier: data.tier,
+        coupon: coupon?.code ?? "",
+      },
+    });
+    return {
+      ok: true,
+      razorpayOrderId: order.id,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID ?? "",
+      amountInPaise: amount,
+      couponApplied: coupon?.code ?? null,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[checkout] Razorpay order create failed:", msg);
+    // Razorpay returns a 400/401 when the account is in test-mode/needs
+    // KYC, or the keys are wrong. Surface that as a specific reason so
+    // the client can show a helpful message instead of a generic alert.
+    if (
+      msg.includes("not active") ||
+      msg.includes("Authentication") ||
+      msg.includes(": 401") ||
+      msg.includes(": 400") ||
+      msg.includes("KYC")
+    ) {
+      return {
+        ok: false,
+        reason: "RAZORPAY_NOT_ACTIVATED",
+        message:
+          "Live payments aren't fully activated yet. Use a coupon code on this page to unlock Pro instantly, or try again later.",
+      };
+    }
+    return {
+      ok: false,
+      reason: "RAZORPAY_ERROR",
+      message:
+        "We couldn't reach our payments provider. Please try again in a moment.",
+    };
+  }
 }
 
 const confirmSchema = z.object({

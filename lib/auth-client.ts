@@ -18,6 +18,9 @@ export const authClient = createAuthClient({
   baseURL: resolvedBaseURL,
   user: {
     additionalFields: {
+      phoneNumber: {
+        type: "string",
+      },
       pregnancyStage: {
         type: "string",
       },

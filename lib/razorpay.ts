@@ -99,18 +99,37 @@ export async function createSubscriptionOrder(opts: {
   notes?: Record<string, string>;
 }): Promise<CreatedOrder> {
   if (!KEY_ID) throw new Error("Razorpay not configured");
+  const requestBody = {
+    amount: opts.amountInPaise,
+    currency: "INR",
+    // Razorpay caps `receipt` at 40 chars. UUID alone is 36, so we slice it.
+    receipt: `sub_${opts.userId.slice(0, 8)}_${Date.now()}`,
+    notes: { purpose: "SUBSCRIPTION", user: opts.userId, ...opts.notes },
+  };
   const res = await rzp("/orders", {
     method: "POST",
-    body: JSON.stringify({
-      amount: opts.amountInPaise,
-      currency: "INR",
-      // Razorpay caps `receipt` at 40 chars. UUID alone is 36, so we slice it.
-      receipt: `sub_${opts.userId.slice(0, 8)}_${Date.now()}`,
-      notes: { purpose: "SUBSCRIPTION", user: opts.userId, ...opts.notes },
-    }),
+    body: JSON.stringify(requestBody),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    // Full log goes to Vercel function logs so we can diagnose:
+    //   - 400 with "BAD_REQUEST_ERROR" + "international cards not enabled" → KYC pending
+    //   - 401 → wrong keys / test vs live mismatch
+    //   - 400 with "amount" complaint → amount below Razorpay floor (₹1 = 100 paise)
+    console.error(
+      "[razorpay] order create failed",
+      JSON.stringify({
+        status: res.status,
+        statusText: res.statusText,
+        body: body.slice(0, 1000),
+        request: {
+          amount: requestBody.amount,
+          currency: requestBody.currency,
+          receipt: requestBody.receipt,
+        },
+        keyIdSuffix: KEY_ID.slice(-6),
+      }),
+    );
     throw new Error(`Razorpay order failed: ${res.status} ${body.slice(0, 300)}`);
   }
   return (await res.json()) as CreatedOrder;

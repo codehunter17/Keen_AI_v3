@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { displayName } from "@/lib/display-name";
+import { displayName, isPlaceholderName } from "@/lib/display-name";
+import { displayEmail, isPhoneOnlyUser } from "@/lib/display-email";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDashboardData } from "@/lib/actions/dashboard";
 import { updateProfile, deleteAccount } from "@/lib/actions/profile";
@@ -64,8 +65,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (data?.user) {
       queueMicrotask(() => {
+        // Don't pre-fill the name input with the phone-OTP synthetic value
+        // (e.g. "+91…") or with an email placeholder. Show an empty field
+        // so the user can type a real name.
+        const rawName = data?.user?.name ?? "";
         setFormData({
-          name: data?.user?.name || "",
+          name: isPlaceholderName(rawName) ? "" : rawName,
           dietaryPref: data?.user?.dietaryPref || "None",
           regionalPref: data?.user?.regionalPref || "None",
           age: data?.user?.age?.toString() || "",
@@ -261,10 +266,14 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2 opacity-60">
                   <label className="text-sm font-bold text-muted-foreground uppercase tracking-widest ml-1">
-                    Email Address
+                    {isPhoneOnlyUser(data?.user) ? "Phone number" : "Email address"}
                   </label>
                   <div className="w-full p-4 rounded-2xl border border-border bg-muted cursor-not-allowed font-medium">
-                    {data?.user?.email}
+                    {displayEmail(data?.user) || (
+                      <span className="text-muted-foreground italic">
+                        Not set
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

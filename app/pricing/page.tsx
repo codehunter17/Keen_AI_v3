@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { TIER_PRICING, TIER_LIMITS } from "@/lib/tiers";
 import { RazorpayCheckoutButton } from "@/components/razorpay-checkout";
 import { RedeemForm } from "./redeem-form";
+import { displayName } from "@/lib/display-name";
+import { safeContactEmail } from "@/lib/display-email";
 
 export const metadata = { title: "Plans · NutriMama" };
 
@@ -77,7 +79,7 @@ export default async function PricingPage() {
                 <RazorpayCheckoutButton
                   tier="CARE_49"
                   label="Upgrade to Care · ₹49/mo"
-                  user={{ name: session.user.name ?? "", email: session.user.email ?? "" }}
+                  user={{ name: displayName(session.user), email: safeContactEmail(session.user) }}
                 />
               ) : (
                 <a href="/auth/sign-up" className="block w-full text-center rounded-full bg-primary py-2 text-sm font-medium text-primary-foreground">
@@ -104,7 +106,7 @@ export default async function PricingPage() {
                   tier="PRO_99"
                   variant="secondary"
                   label="Go Pro · ₹99/mo"
-                  user={{ name: session.user.name ?? "", email: session.user.email ?? "" }}
+                  user={{ name: displayName(session.user), email: safeContactEmail(session.user) }}
                 />
               ) : (
                 <a href="/auth/sign-up" className="block w-full text-center rounded-full border border-border py-2 text-sm font-medium">

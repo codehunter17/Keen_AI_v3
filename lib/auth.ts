@@ -28,6 +28,13 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   user: {
     additionalFields: {
+      // Phone number for phone-OTP users — surfaced so the client can
+      // distinguish phone-only signups (whose email is synthetic) and
+      // display the phone instead of "+91…@phone.nutrimama.local".
+      phoneNumber: {
+        type: "string",
+        required: false,
+      },
       pregnancyStage: {
         type: "string",
         required: false,

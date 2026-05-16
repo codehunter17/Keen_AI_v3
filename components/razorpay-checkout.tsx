@@ -74,19 +74,18 @@ export function RazorpayCheckoutButton({
           couponCode: coupon || undefined,
         });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
-        if (msg.includes("Razorpay order failed: 400") || msg.includes("not active")) {
-          alert(
-            "Razorpay isn't ready yet — your merchant account needs KYC activation before live payments work.\n\n" +
-            "For now, scroll down and use the coupon code box on the pricing page to unlock Pro instantly.",
-          );
-        } else {
-          alert("Could not start checkout: " + msg.slice(0, 200));
-        }
+        // Network / framework error — server action couldn't even run.
+        console.error("[checkout] action threw:", e);
+        alert(
+          "Couldn't reach our servers. Please check your connection and try again.",
+        );
         return;
       }
       if (!order.ok) {
-        alert("Could not start checkout. Please try again.");
+        // The server action returns a real error reason and a user-facing
+        // message — show that instead of the React production mask.
+        console.warn("[checkout] not ok:", order.reason, order.message);
+        alert(order.message);
         return;
       }
       const ok = await loadScript();

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { displayName, displayFirstName } from "@/lib/display-name";
+import { displayEmail } from "@/lib/display-email";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getChatSessions,
@@ -484,7 +485,7 @@ export default function ChatPage() {
                       {displayName(session?.user)}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {session?.user?.email}
+                      {displayEmail(session?.user)}
                     </p>
                   </div>
                 </div>
