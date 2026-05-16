@@ -45,6 +45,7 @@ export type CheckoutOrderResult =
         | "INVALID_INPUT"
         | "RAZORPAY_NOT_CONFIGURED"
         | "RAZORPAY_NOT_ACTIVATED"
+        | "RAZORPAY_AUTH_FAILED"
         | "RAZORPAY_ERROR"
         | "DB_ERROR";
       message: string;
@@ -135,13 +136,29 @@ export async function createCheckoutOrder(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[checkout] Razorpay order create failed:", msg);
-    // Razorpay returns a 400/401 when the account is in test-mode/needs
-    // KYC, or the keys are wrong. Surface that as a specific reason so
-    // the client can show a helpful message instead of a generic alert.
+
+    // 401 = bad API key/secret pair. Most common cause is the env var was
+    // overwritten with the wrong value (e.g., webhook secret got pasted
+    // into KEY_SECRET) or the key was rotated in Razorpay dashboard but
+    // Vercel still has the old value. Surface this distinctly from KYC.
+    if (
+      msg.includes(": 401") ||
+      msg.toLowerCase().includes("authentication failed") ||
+      msg.toLowerCase().includes("api key/secret")
+    ) {
+      return {
+        ok: false,
+        reason: "RAZORPAY_AUTH_FAILED",
+        message:
+          "Payment authentication failed. Our API keys are out of sync — please use a coupon code for now while we fix this.",
+      };
+    }
+
+    // 400 with "not active" / "KYC" = account-level issue (KYC pending,
+    // international not enabled, etc.). User can't fix this themselves;
+    // we direct them to coupon path.
     if (
       msg.includes("not active") ||
-      msg.includes("Authentication") ||
-      msg.includes(": 401") ||
       msg.includes(": 400") ||
       msg.includes("KYC")
     ) {
@@ -152,6 +169,7 @@ export async function createCheckoutOrder(
           "Live payments aren't fully activated yet. Use a coupon code on this page to unlock Pro instantly, or try again later.",
       };
     }
+
     return {
       ok: false,
       reason: "RAZORPAY_ERROR",

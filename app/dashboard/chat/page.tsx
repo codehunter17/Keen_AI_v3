@@ -902,11 +902,11 @@ export default function ChatPage() {
 
                 <div className="pt-4 flex flex-col space-y-3">
                   <Link
-                    href="/dashboard/profile"
+                    href="/pricing"
                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center space-x-2"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Upgrade to Pro Max</span>
+                    <span>Upgrade to Pro</span>
                   </Link>
                   <button
                     onClick={() => setShowLimitModal(false)}

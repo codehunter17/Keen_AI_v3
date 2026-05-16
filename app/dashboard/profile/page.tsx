@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { displayName, isPlaceholderName } from "@/lib/display-name";
 import { displayEmail, isPhoneOnlyUser } from "@/lib/display-email";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -670,10 +671,13 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <button className="w-full py-4 rounded-2xl bg-foreground text-background font-bold hover:opacity-90 transition-all flex items-center justify-center space-x-2 group">
+            <Link
+              href="/pricing"
+              className="w-full py-4 rounded-2xl bg-foreground text-background font-bold hover:opacity-90 transition-all flex items-center justify-center space-x-2 group"
+            >
               <Zap className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
-              <span>Upgrade to Pro Max</span>
-            </button>
+              <span>Upgrade to Pro</span>
+            </Link>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
