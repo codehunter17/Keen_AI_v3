@@ -41,6 +41,7 @@ const LIFE_STAGE_OPTIONS: {
 ];
 
 export type OnboardingInitial = {
+  name: string;                      // "" if unset OR was a phone-shaped placeholder
   dob: string;                       // "" if not set, else ISO yyyy-mm-dd
   language: "en" | "hi";
   lifeStage: LifeStage | null;
@@ -65,6 +66,7 @@ export function OnboardingClient({
   const [error, setError] = useState<string | null>(null);
 
   // Prefilled from server — user never re-enters anything they already saved.
+  const [name, setName] = useState(initial.name);
   const [dob, setDob] = useState(initial.dob);
   const [language, setLanguage] = useState<"en" | "hi">(initial.language);
   const [lifeStage, setLifeStageVal] = useState<LifeStage | null>(initial.lifeStage);
@@ -83,7 +85,12 @@ export function OnboardingClient({
   const submitStep0 = () => {
     setError(null);
     startTransition(async () => {
-      const res = await setBasics({ dob, countryCode: "IN", languagePref: language });
+      const res = await setBasics({
+        dob,
+        countryCode: "IN",
+        languagePref: language,
+        name: name.trim() || undefined,
+      });
       if (!res.ok) {
         setError(res.message);
         return;
@@ -150,13 +157,40 @@ export function OnboardingClient({
                   A few quick things so we can personalize everything for you.
                 </p>
 
-                <label className="mt-6 block text-sm font-medium">Your date of birth</label>
+                <label
+                  htmlFor="ob-name"
+                  className="mt-6 block text-sm font-medium"
+                >
+                  Your name
+                </label>
                 <input
+                  id="ob-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Priya (or skip and we'll call you Ma'am)"
+                  maxLength={60}
+                  autoComplete="given-name"
+                  className="mt-1 w-full h-12 rounded-xl border border-border bg-input/40 px-3 outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Optional. We&apos;ll greet you by this name. Leave blank to be
+                  called <strong>Ma&apos;am</strong>.
+                </p>
+
+                <label
+                  htmlFor="ob-dob"
+                  className="mt-5 block text-sm font-medium"
+                >
+                  Your date of birth
+                </label>
+                <input
+                  id="ob-dob"
                   type="date"
                   value={dob}
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setDob(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-border bg-input/40 px-3 py-2.5 outline-none focus:ring-2 focus:ring-ring"
+                  className="mt-1 w-full h-12 rounded-xl border border-border bg-input/40 px-3 outline-none focus:ring-2 focus:ring-ring"
                 />
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   We use this to unlock the right features for your stage of life.

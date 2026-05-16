@@ -21,10 +21,24 @@ async function requireSession() {
 }
 
 // ─── Step 1: capture DOB and confirm 18+ ─────────────────────
+// Strip leading/trailing junk + reject "+91..." style phone-as-name strings.
+function isPhoneShaped(s: string): boolean {
+  const d = s.replace(/[+\-\s()]/g, "");
+  return /^\d{7,15}$/.test(d);
+}
+
 const setBasicsSchema = z.object({
   dob: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
   countryCode: z.string().length(2).default("IN"),
   languagePref: z.enum(["en", "hi", "ta", "te", "bn", "mr"]).default("en"),
+  // Optional — user can skip and be addressed as "Ma'am". Server rejects
+  // phone-shaped values so we never persist a phone-as-name regression.
+  name: z
+    .string()
+    .trim()
+    .max(60, "Name is too long")
+    .optional()
+    .transform((v) => (v && !isPhoneShaped(v) ? v : undefined)),
 });
 
 export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
@@ -44,6 +58,19 @@ export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
     } as const;
   }
 
+  // Only write name if the user actually typed one. Also overwrite any
+  // pre-existing phone-shaped name (the Better Auth phone-OTP default).
+  const currentName = (await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true },
+  }))?.name?.trim() ?? "";
+  const nameToWrite =
+    data.name && data.name.length > 0
+      ? data.name
+      : isPhoneShaped(currentName)
+        ? "" // wipe the phone, leave blank so UI shows "Ma'am"
+        : undefined;
+
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
@@ -51,6 +78,7 @@ export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
       age,
       countryCode: data.countryCode,
       languagePref: data.languagePref,
+      ...(nameToWrite !== undefined ? { name: nameToWrite } : {}),
     },
   });
 

@@ -18,6 +18,7 @@ export default async function OnboardingPage() {
   const user = await prisma.user.findUnique({
     where: { id: s.user.id },
     select: {
+      name: true,
       dob: true,
       languagePref: true,
       lifeStage: true,
@@ -51,7 +52,19 @@ export default async function OnboardingPage() {
         ? 2
         : 3;
 
+  // Strip phone-shaped names so the field shows empty (not "+91…") and
+  // the user is prompted to type their real name once.
+  const cleanedName = (() => {
+    const raw = (user.name ?? "").trim();
+    if (!raw) return "";
+    const d = raw.replace(/[+\-\s()]/g, "");
+    if (/^\d{7,15}$/.test(d)) return ""; // looks like a phone number
+    if (raw.includes("@") && /\.[a-z]{2,}/i.test(raw)) return ""; // looks like an email
+    return raw;
+  })();
+
   const initial: OnboardingInitial = {
+    name: cleanedName,
     dob: user.dob ? user.dob.toISOString().slice(0, 10) : "",
     language: (user.languagePref === "hi" ? "hi" : "en"),
     lifeStage: (user.lifeStage as LifeStage) ?? null,

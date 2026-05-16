@@ -17,8 +17,37 @@ type NameLike =
 
 function pickName(input: NameLike): string {
   if (!input) return "";
-  if (typeof input === "string") return input.trim();
-  return (input.name ?? "").trim();
+  const raw = typeof input === "string" ? input : (input.name ?? "");
+  const trimmed = raw.trim();
+  // Phone OTP signup defaults the name field to the phone number. That's
+  // an identifier, not a name — never greet a user as "+917070511022".
+  // Treat phone-shaped strings as if no name were set so the rest of the
+  // app falls back to "Ma'am" and the missing-name nudge shows.
+  if (looksLikePhoneNumber(trimmed)) return "";
+  // Also reject email-shaped strings (some auth flows populate name=email).
+  if (trimmed.includes("@") && /\.[a-z]{2,}/i.test(trimmed)) return "";
+  return trimmed;
+}
+
+function looksLikePhoneNumber(s: string): boolean {
+  if (!s) return false;
+  // Strip common phone glyphs (+ - space ( )) and see if what's left is
+  // 7-15 digits — covers Indian (+91…) and international formats.
+  const digitsOnly = s.replace(/[+\-\s()]/g, "");
+  if (!/^\d{7,15}$/.test(digitsOnly)) return false;
+  return true;
+}
+
+/**
+ * True when the input is the phone-as-name default that phone-OTP signup
+ * leaves on the user record. UI uses this to surface the name-capture nudge.
+ */
+export function isPlaceholderName(input: NameLike): boolean {
+  if (!input) return false;
+  const raw = typeof input === "string" ? input : (input.name ?? "");
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  return looksLikePhoneNumber(trimmed) || /@.+\.[a-z]{2,}/i.test(trimmed);
 }
 
 /**

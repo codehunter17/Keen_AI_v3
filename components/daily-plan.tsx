@@ -1,6 +1,7 @@
 // Server component — pulls together cycle prediction + selfcare tip +
 // remedy of the day + streak. Drop into the dashboard root page.
 
+import { displayFirstName } from "@/lib/display-name";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -61,7 +62,7 @@ export async function DailyPlan() {
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <div>
           <p className="font-heading text-2xl sm:text-3xl text-primary">
-            {greeting}, {(u.name ?? "").split(" ")[0] || "friend"}
+            {greeting}, {displayFirstName(u.name)}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {format(new Date(), "EEEE, dd MMMM yyyy")}
