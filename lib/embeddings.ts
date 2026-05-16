@@ -5,7 +5,10 @@
 // keeps technically working even when both providers are down. Quality
 // drops to "exact-match-only" but we never break.
 
-import "server-only";
+// Note: this module is server-only by intent (uses provider SDKs + secrets)
+// but we deliberately don't `import "server-only"` here — that would crash
+// the standalone CLI ingest script in scripts/ingest-conditions-rag.ts.
+// Server-side enforcement remains via lib/condition-rag.ts which DOES use it.
 import { InferenceClient } from "@huggingface/inference";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -67,7 +70,9 @@ async function embedOne(p: Provider, text: string): Promise<number[]> {
 
   if (p === "gemini") {
     const ai = new GoogleGenerativeAI(geminiKey()!);
-    const model = ai.getGenerativeModel({ model: "text-embedding-004" });
+    // Google rotated the API name; "text-embedding-004" returns 404 on the
+    // public v1beta endpoint. Use the current stable model id.
+    const model = ai.getGenerativeModel({ model: "gemini-embedding-001" });
     const r = await model.embedContent(text);
     const vec = r.embedding?.values;
     if (!Array.isArray(vec)) throw new Error("gemini returned no vector");

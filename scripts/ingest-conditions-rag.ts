@@ -14,12 +14,20 @@
  * in .env for non-fallback quality.
  */
 
+// Load .env first — tsx doesn't pick it up automatically the way next dev does.
+import { config as loadEnv } from "dotenv";
+loadEnv({ path: ".env" });
+
 import { createHash } from "node:crypto";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { CONDITIONS } from "../lib/conditions";
 import { generateEmbedding } from "../lib/embeddings";
 
-const prisma = new PrismaClient();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const SECTION_KEYS = [
   "overview",
