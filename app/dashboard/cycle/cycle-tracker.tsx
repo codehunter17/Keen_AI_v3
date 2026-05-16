@@ -1,11 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { logCycle, deleteCycleEntry } from "@/lib/actions/cycle";
-import { format, formatDistanceToNow, differenceInCalendarDays } from "date-fns";
+import {
+  format,
+  formatDistanceToNow,
+  differenceInCalendarDays,
+  addDays,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  getDay,
+} from "date-fns";
 import { LiveCycleRing } from "@/components/live-cycle-ring";
+import { cn } from "@/lib/utils";
+
+type CycleTab = "today" | "calendar" | "analysis";
 
 interface CycleEntry {
   id: string;
@@ -50,6 +63,42 @@ export function CycleTracker({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showLog, setShowLog] = useState(false);
+  const [tab, setTab] = useState<CycleTab>("today");
+
+  // Pre-compute cycle-level analytics for the Analysis tab.
+  const analysis = useMemo(() => {
+    const lengths: number[] = [];
+    const periodDays: number[] = [];
+    for (let i = 1; i < history.length; i++) {
+      const a = new Date(history[i - 1].startDate);
+      const b = new Date(history[i].startDate);
+      lengths.push(Math.abs(differenceInCalendarDays(a, b)));
+    }
+    for (const h of history) {
+      if (h.endDate) {
+        periodDays.push(
+          Math.max(1, differenceInCalendarDays(new Date(h.endDate), new Date(h.startDate)) + 1),
+        );
+      }
+    }
+    const symptomCount: Record<string, number> = {};
+    for (const h of history) {
+      for (const s of h.symptoms ?? []) {
+        symptomCount[s] = (symptomCount[s] ?? 0) + 1;
+      }
+    }
+    const topSymptoms = Object.entries(symptomCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const avgLen = lengths.length
+      ? +(lengths.reduce((s, n) => s + n, 0) / lengths.length).toFixed(1)
+      : null;
+    const avgPeriod = periodDays.length
+      ? +(periodDays.reduce((s, n) => s + n, 0) / periodDays.length).toFixed(1)
+      : null;
+    const regular = avgLen != null && lengths.every((l) => Math.abs(l - avgLen) <= 4);
+    return { avgLen, avgPeriod, topSymptoms, regular, lengths, periodDays };
+  }, [history]);
 
   const [startDate, setStartDate] = useState<string>(
     new Date().toISOString().slice(0, 10),
@@ -91,9 +140,40 @@ export function CycleTracker({
         </p>
       </header>
 
+      {/* ── Tab bar — Today / Calendar / Analysis ───────────────────── */}
+      <div
+        role="tablist"
+        aria-label="Cycle view"
+        className="grid grid-cols-3 gap-2 p-1 bg-muted/40 rounded-2xl"
+      >
+        {([
+          { id: "today" as const, label: "Today", emoji: "📍" },
+          { id: "calendar" as const, label: "Calendar", emoji: "📆" },
+          { id: "analysis" as const, label: "Analysis", emoji: "📊" },
+        ]).map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "h-11 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5",
+              tab === t.id
+                ? "bg-primary text-white shadow-sm"
+                : "text-foreground hover:bg-muted",
+            )}
+          >
+            <span aria-hidden>{t.emoji}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* Live cycle ring — large, animated, interactive. Shows the user
           where she is in her cycle at a glance. Compute today's cycle day
           from the most-recent period start in history. */}
+      {tab === "today" && <>
       <section className="rounded-3xl bg-card border border-border lift p-6 sm:p-8 pb-12">
         {(() => {
           const lastStart = prediction.lastStart
@@ -276,6 +356,71 @@ export function CycleTracker({
           </div>
         </section>
       )}
+      </>}
+
+      {/* ── Calendar tab — 8-week mini grid of past + predicted periods ── */}
+      {tab === "calendar" && (
+        <CycleCalendar
+          history={history}
+          prediction={prediction}
+        />
+      )}
+
+      {/* ── Analysis tab: averages + symptom frequency + history ─────── */}
+      {tab === "analysis" && (
+        <>
+          <section className="rounded-3xl bg-card border border-border p-5 sm:p-6 space-y-4">
+            <h2 className="font-heading text-lg text-foreground">Your patterns</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-muted/40 p-4">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Avg cycle length
+                </p>
+                <p className="font-heading text-2xl text-foreground mt-1">
+                  {analysis.avgLen ? `${analysis.avgLen} days` : "—"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-muted/40 p-4">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Avg period
+                </p>
+                <p className="font-heading text-2xl text-foreground mt-1">
+                  {analysis.avgPeriod ? `${analysis.avgPeriod} days` : "—"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-muted/40 p-4 col-span-2">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Regularity
+                </p>
+                <p className="text-sm text-foreground mt-1">
+                  {analysis.lengths.length === 0
+                    ? "Log 2+ cycles to see regularity."
+                    : analysis.regular
+                      ? "Your cycles are regular (within ±4 days)."
+                      : "Your cycles vary by more than 4 days. Worth a chat with your doctor if this continues."}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {analysis.topSymptoms.length > 0 && (
+            <section className="rounded-3xl bg-card border border-border p-5 sm:p-6 space-y-3">
+              <h2 className="font-heading text-lg text-foreground">Most frequent symptoms</h2>
+              <ul className="space-y-2">
+                {analysis.topSymptoms.map(([name, count]) => (
+                  <li
+                    key={name}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2"
+                  >
+                    <span className="text-sm capitalize">{name}</span>
+                    <span className="text-xs font-semibold text-primary">
+                      {count} {count === 1 ? "cycle" : "cycles"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
       {/* History */}
       <section className="rounded-2xl bg-card lift p-6">
@@ -338,6 +483,126 @@ export function CycleTracker({
           </ul>
         )}
       </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Calendar mini-grid component ───────────────────────────────────────
+// Two-month vertical layout. Each cell is a day. Past period days are
+// rose-tinted; predicted period days are dashed; ovulation is highlighted.
+function CycleCalendar({
+  history,
+  prediction,
+}: {
+  history: CycleEntry[];
+  prediction: Prediction;
+}) {
+  // Build a set of "period day" ISO strings from history.
+  const periodDays = new Set<string>();
+  for (const h of history) {
+    const start = new Date(h.startDate);
+    const end = h.endDate ? new Date(h.endDate) : addDays(start, 4);
+    for (const d of eachDayOfInterval({ start, end })) {
+      periodDays.add(d.toISOString().slice(0, 10));
+    }
+  }
+  // Predicted next period range.
+  const predictedDays = new Set<string>();
+  if (prediction.nextPredictedStart) {
+    const ps = new Date(prediction.nextPredictedStart);
+    const len = prediction.averagePeriodDays ?? 5;
+    for (const d of eachDayOfInterval({ start: ps, end: addDays(ps, len - 1) })) {
+      predictedDays.add(d.toISOString().slice(0, 10));
+    }
+  }
+  const ovulationKey = prediction.ovulationDate
+    ? new Date(prediction.ovulationDate).toISOString().slice(0, 10)
+    : null;
+
+  // Render this month + next month.
+  const today = new Date();
+  const months = [today, addDays(endOfMonth(today), 1)];
+  const weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+
+  return (
+    <section className="rounded-3xl bg-card border border-border p-5 space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-lg text-foreground">Calendar</h2>
+        <Legend />
+      </div>
+      {months.map((m, mi) => {
+        const monthStart = startOfMonth(m);
+        const monthEnd = endOfMonth(m);
+        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const offset = getDay(monthStart); // 0 = Sun
+        return (
+          <div key={mi}>
+            <p className="text-sm font-semibold text-foreground mb-2">
+              {format(m, "MMMM yyyy")}
+            </p>
+            <div className="grid grid-cols-7 gap-1">
+              {weekdayLabels.map((w, i) => (
+                <div
+                  key={i}
+                  className="text-[10px] text-center text-muted-foreground font-semibold py-1"
+                >
+                  {w}
+                </div>
+              ))}
+              {Array.from({ length: offset }).map((_, i) => (
+                <div key={`pad-${i}`} aria-hidden />
+              ))}
+              {days.map((d) => {
+                const key = d.toISOString().slice(0, 10);
+                const isToday = isSameDay(d, today);
+                const isPeriod = periodDays.has(key);
+                const isPredicted = predictedDays.has(key);
+                const isOvulation = ovulationKey === key;
+                return (
+                  <div
+                    key={key}
+                    aria-label={format(d, "EEEE d MMMM")}
+                    className={cn(
+                      "aspect-square rounded-lg flex items-center justify-center text-xs font-medium relative",
+                      isPeriod
+                        ? "bg-rose-200 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100"
+                        : isPredicted
+                          ? "border border-dashed border-rose-400 dark:border-rose-700 text-rose-700 dark:text-rose-300"
+                          : isOvulation
+                            ? "bg-emerald-200 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-100"
+                            : "text-foreground/70",
+                      isToday && "ring-2 ring-primary ring-offset-1 ring-offset-card",
+                    )}
+                  >
+                    {format(d, "d")}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+      <span className="inline-flex items-center gap-1">
+        <span className="w-3 h-3 rounded bg-rose-200 dark:bg-rose-900/60" />
+        Period
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="w-3 h-3 rounded border border-dashed border-rose-400" />
+        Predicted
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="w-3 h-3 rounded bg-emerald-200 dark:bg-emerald-900/60" />
+        Ovulation
+      </span>
     </div>
   );
 }

@@ -37,6 +37,7 @@ const NAV_ITEMS = [
   { label: "Self-care", href: "/dashboard/selfcare", icon: Leaf },
   { label: "Remedies", href: "/dashboard/remedies", icon: Sparkles },
   { label: "Chat", href: "/dashboard/chat", icon: MessageSquare },
+  { label: "Weekly", href: "/dashboard/weekly", icon: FileText },
   { label: "Learn", href: "/dashboard/learn", icon: BookOpen },
   { label: "Reports", href: "/dashboard/reports", icon: FileText },
   { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },

@@ -67,6 +67,29 @@ export default async function PregnancyPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      {/* Always-visible link to the trimester warning-signs module.
+          Sits above the hero so it's the first thing if something is wrong. */}
+      <Link
+        href="/dashboard/pregnancy/warnings"
+        className="flex items-center gap-3 rounded-2xl border border-red-300 dark:border-red-800/60 bg-red-50 dark:bg-red-950/30 px-4 py-3 hover:bg-red-100/60 transition"
+      >
+        <span aria-hidden className="text-2xl leading-none">🚨</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-heading text-sm font-bold text-red-900 dark:text-red-100">
+            Pregnancy warning signs
+          </p>
+          <p className="text-[11px] text-red-900/80 dark:text-red-100/80">
+            What needs urgent attention, by trimester
+          </p>
+        </div>
+        <span
+          aria-hidden
+          className="text-red-700 dark:text-red-300 font-bold text-lg"
+        >
+          ›
+        </span>
+      </Link>
+
       {/* Hero — week + trimester + due date */}
       <section
         className={`rounded-3xl bg-gradient-to-br ${theme.from} ${theme.to} p-7 sm:p-9 relative overflow-hidden`}

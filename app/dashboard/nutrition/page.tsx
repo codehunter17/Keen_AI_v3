@@ -6,6 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Info, AlertCircle, Apple, Sparkles, Lock } from "lucide-react";
 import { pickDaily, DAILY_NUTRIENT_FOCUS } from "@/lib/daily";
+import { AbsorptionScienceCard } from "@/components/absorption-science-card";
 
 export default function NutritionPage() {
   const [activeDay, setActiveDay] = useState(1);
@@ -55,6 +56,7 @@ export default function NutritionPage() {
       <div className="max-w-3xl mx-auto space-y-6 px-5 pb-16">
         {/* Still show the rotating focus nutrient — gives Free users value */}
         <NutrientFocusStrip focus={focus} />
+        <AbsorptionScienceCard compact />
 
         <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-secondary/5 to-gold/5 p-6 sm:p-10 text-center">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
@@ -107,6 +109,7 @@ export default function NutritionPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 px-5 pb-10">
       <NutrientFocusStrip focus={focus} />
+      <AbsorptionScienceCard />
 
       {/* Milestone Banner */}
       <motion.div
