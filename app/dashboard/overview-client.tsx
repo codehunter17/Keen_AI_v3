@@ -1,5 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { displayName, displayFirstName, displayInitial, hasUserName } from "@/lib/display-name";
+import { NameEditor } from "@/components/name-editor";
 import { getDashboardData } from "@/lib/actions/dashboard";
 import {
   Calendar as CalendarIcon,
@@ -197,6 +199,14 @@ export default function OverviewClient() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 pb-20 px-3">
+      {/* Name nudge — only shows when the user hasn't told us their name.
+          Default greeting is "Ma'am" but a real name reads warmer. */}
+      {!hasUserName(data?.user) && (
+        <div className="rounded-3xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-1">
+          <NameEditor currentName="" variant="card" />
+        </div>
+      )}
+
       {/* Top Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <motion.div
@@ -207,7 +217,7 @@ export default function OverviewClient() {
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground tracking-tight">
             Welcome home,{" "}
             <span className="text-primary">
-              {data?.user?.name?.split(" ")[0] || "friend"}
+              {displayFirstName(data?.user)}
             </span>
             .
           </h1>
@@ -501,12 +511,12 @@ export default function OverviewClient() {
               <div className="relative w-28 h-28 mx-auto">
                 <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse"></div>
                 <div className="relative w-full h-full bg-primary/10 rounded-full flex items-center justify-center text-4xl border-4 border-primary/20 shadow-lg text-primary overflow-hidden">
-                  {data?.user?.name?.charAt(0) || "M"}
+                  {displayInitial(data?.user)}
                 </div>
               </div>
               <div>
                 <h3 className="text-2xl font-bold font-heading">
-                  {data?.user?.name || "Friend"}
+                  {displayName(data?.user)}
                 </h3>
                 {(() => {
                   const tierKey: Tier = (data?.user?.tier as Tier) || "FREE";

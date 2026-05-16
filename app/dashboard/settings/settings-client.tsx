@@ -12,6 +12,8 @@
 // Provider-status panel is hidden (dev-only).
 
 import { useState, useTransition } from "react";
+import { displayName, displayInitial } from "@/lib/display-name";
+import { NameEditor } from "@/components/name-editor";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cancelSubscription } from "@/lib/actions/subscription";
@@ -164,10 +166,10 @@ export function SettingsClient({
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/15 blur-2xl" />
         <div className="relative flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-2xl font-heading">
-            {user.name.charAt(0).toUpperCase()}
+            {displayInitial(user)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-heading text-2xl truncate">{user.name}</p>
+            <p className="font-heading text-2xl truncate">{displayName(user)}</p>
             <p className="text-xs text-white/85 mt-0.5">
               {isPregnant ? `🤰 Pregnancy · Week ${user.pregnancyWeek ?? "?"}` : "🌸 Period Tracking"}
               {user.age != null && ` · ${user.age} yrs`}
@@ -178,6 +180,11 @@ export function SettingsClient({
             </span>
           </div>
         </div>
+      </section>
+
+      {/* ── NAME (single tap to edit) ─────────────────────────── */}
+      <section className="rounded-3xl bg-card border border-border overflow-hidden">
+        <NameEditor currentName={user.name} />
       </section>
 
       {/* ── TRACKING MODE switcher ─────────────────────────────── */}

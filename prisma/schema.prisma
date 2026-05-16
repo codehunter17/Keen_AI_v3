@@ -483,6 +483,29 @@ model Report {
   @@map("report")
 }
 
+// ─────────────────────────────────────────────────────────────
+// KnowledgeChunk — shared (non-user) medical knowledge base.
+// One row per (conditionSlug, sectionType). Embedded once via the
+// scripts/ingest-conditions-rag.ts script; retrieved by chat to
+// ground responses in NutriMama's 30-condition catalog.
+// ─────────────────────────────────────────────────────────────
+model KnowledgeChunk {
+  id             String                       @id @default(uuid())
+  conditionSlug  String                       // matches Condition.slug in lib/conditions.ts
+  conditionName  String                       // denormalized for fast retrieval display
+  sectionType    String                       // "overview" | "gharelu" | "ayurveda" | "modern" | "emergency"
+  content        String                       // the raw text chunk that was embedded
+  citations      String[]                     // source labels e.g. ["FOGSI 2023", "ICMR-NIN 2020"]
+  embedding      Unsupported("vector(384)")?
+  contentHash    String                       // sha256 of content — used to detect changes and skip re-embedding
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  @@unique([conditionSlug, sectionType])
+  @@index([conditionSlug])
+  @@map("knowledge_chunk")
+}
+
 model Memory {
   id        String                      @id @default(uuid())
   content   String

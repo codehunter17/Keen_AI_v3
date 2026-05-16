@@ -14,6 +14,7 @@ import {
   type PhasePayload,
 } from "@/lib/phase-payload";
 import { findRelevantConditions, conditionsContextBlock } from "@/lib/conditions-kb";
+import { buildRagContext } from "@/lib/condition-rag";
 import { differenceInCalendarDays } from "date-fns";
 import { runPredictionAndStoreFact } from "@/lib/actions/predict";
 import { tierLimit, type Tier } from "@/lib/tiers";
@@ -254,10 +255,13 @@ export async function POST(req: NextRequest) {
   };
 
   // ── Match condition knowledge against user's message ──
-  // The AI gets specialist-level info on whatever the user is actually asking about,
-  // so it can give deep answers instead of "see a doctor."
+  // Two layers, complementary:
+  //  - Keyword block (fast, deterministic) from the legacy conditions-kb file
+  //  - Semantic RAG block from the new KnowledgeChunk table (pgvector)
+  // RAG silently returns "" if the table is empty or pgvector errors.
   const relevantConditions = findRelevantConditions(message, 2);
   const conditionsBlock = conditionsContextBlock(relevantConditions);
+  const { promptFragment: ragBlock } = await buildRagContext(phi.scrubbed);
 
   // ── Strict hyper-personalization system prompt ──
   const systemPrompt = [
@@ -265,6 +269,7 @@ export async function POST(req: NextRequest) {
     yellowPreamble ? "\n### TRIAGE NOTE — see a doctor today\n" + yellowPreamble : "",
     `\n### Predicted Risk Level: ${riskLevel}`,
     conditionsBlock ? "\n" + conditionsBlock : "",
+    ragBlock ? "\n" + ragBlock : "",
     "\n### Reports (verbatim AI summaries)\n" + reportContext,
     "\n### Recent daily logs\n" + logContext,
     "\n### Relevant past memories\n" + memoryContext,

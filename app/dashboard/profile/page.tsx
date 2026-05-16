@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { displayName } from "@/lib/display-name";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDashboardData } from "@/lib/actions/dashboard";
 import { updateProfile, deleteAccount } from "@/lib/actions/profile";
@@ -117,13 +118,23 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[60vh] items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div
+        className="flex flex-col h-[60vh] items-center justify-center space-y-4"
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"
+          aria-hidden
+        />
+        <p className="text-sm text-muted-foreground font-medium">
+          Loading your profile…
+        </p>
       </div>
     );
   }
 
-  const userName = data?.user?.name || "Mom-to-be";
+  const userName = displayName(data?.user);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20 px-2">

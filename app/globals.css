@@ -186,3 +186,35 @@
   .bg-primary { background: #f9f9f9 !important; border: 1px solid #ddd !important; }
   .print-header { display: flex !important; border-bottom: 2px solid #333 !important; margin-bottom: 2rem !important; padding-bottom: 1rem !important; }
 }
+
+/* ─── MOBILE SAFETY NET ─────────────────────────────────────
+   Belt-and-suspenders rules for mobile that catch anything
+   we missed in component-level Tailwind classes.
+   ─────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* iOS Safari auto-zooms when a focused input has font-size <16px and
+     never unzooms. Force a 16px minimum on every input/select/textarea
+     so future components are immune. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+
+  /* Prevent horizontal scroll bugs from rogue wide elements. */
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Honour the iPhone home indicator / notch on full-bleed fixed UI. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Horizontal scroll containers without visible scrollbar (tab/chip bars). */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

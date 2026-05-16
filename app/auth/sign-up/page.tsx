@@ -213,7 +213,7 @@ export default function SignUpPage() {
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-foreground">Mobile number</label>
-                    <div className="mt-1 flex rounded-xl border border-input bg-card/50 focus-within:ring-1 focus-within:ring-primary h-11 overflow-hidden">
+                    <div className="mt-1 flex rounded-xl border border-input bg-card/50 focus-within:ring-1 focus-within:ring-primary h-12 overflow-hidden">
                       <span className="px-3 inline-flex items-center text-sm font-medium text-muted-foreground bg-muted/40 border-r border-input">+91</span>
                       <input
                         type="tel"
@@ -290,7 +290,7 @@ export default function SignUpPage() {
                   <label className="block text-sm font-medium text-foreground">Name</label>
                   <input
                     type="text"
-                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-11"
+                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-12"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -301,7 +301,7 @@ export default function SignUpPage() {
                   <input
                     type="email"
                     autoComplete="email"
-                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-11"
+                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-12"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -313,7 +313,7 @@ export default function SignUpPage() {
                     type="password"
                     autoComplete="new-password"
                     minLength={8}
-                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-11"
+                    className="mt-1 block w-full rounded-xl border border-input bg-card/50 px-4 py-2 outline-none focus:ring-1 focus:ring-primary h-12"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required

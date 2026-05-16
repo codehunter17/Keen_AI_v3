@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { displayName, displayFirstName } from "@/lib/display-name";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getChatSessions,
@@ -371,7 +372,7 @@ export default function ChatPage() {
   };
 
   const { data: session } = useSession();
-  const userName = session?.user?.name?.split(" ")[0] || "there";
+  const userName = displayFirstName(session?.user);
 
   const currentTime = new Date().getHours();
   const greeting =
@@ -430,8 +431,18 @@ export default function ChatPage() {
                   </div>
                   <div className="space-y-1">
                     {sessionsLoading ? (
-                      <div className="flex items-center justify-center p-8">
-                        <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                      <div
+                        className="flex flex-col items-center justify-center p-8 gap-2"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div
+                          className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin"
+                          aria-hidden
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Loading chats…
+                        </p>
                       </div>
                     ) : (
                       sessions?.map((s: ChatSession) => (
@@ -470,7 +481,7 @@ export default function ChatPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-md font-bold truncate">
-                      {session?.user?.name}
+                      {displayName(session?.user)}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {session?.user?.email}
@@ -832,7 +843,7 @@ export default function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={isStreaming ? "Streaming…" : "Ask NutriMama..."}
-                className="w-full bg-card/40 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] pl-6 pr-14 md:pl-8 md:pr-16 py-4 md:py-6 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary shadow-lg transition-all text-sm md:text-base text-foreground placeholder:text-foreground/70"
+                className="w-full bg-card/40 backdrop-blur-3xl border border-white/20 rounded-[2.5rem] pl-6 pr-14 md:pl-8 md:pr-16 py-4 md:py-6 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary shadow-lg transition-all text-base text-foreground placeholder:text-foreground/70"
                 disabled={isStreaming}
               />
               {/* Single button: turns into a Stop button while streaming.

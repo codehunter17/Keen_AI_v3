@@ -81,11 +81,11 @@ export async function runPredictionAndStoreFact(userId: string) {
     await storeMemory(userId, fact);
 
     return { riskLevel: risk_level, confidence, fact };
-  } catch {
-    return {
-      riskLevel: "Medium",
-      confidence: 0.5,
-      fact: "Prediction fallback due to remote connectivity issues.",
-    };
+  } catch (err) {
+    // Never fabricate a risk level on a health app. Callers already handle
+    // null by defaulting to "Low" for RAG context (no false alarm, no fake
+    // medium signal). Log so ops can see ML outages.
+    console.error("[predict] ML prediction failed:", err);
+    return null;
   }
 }

@@ -3,16 +3,15 @@
 // (health data must always be fresh). On request we'll expand once we
 // add a queue for offline cycle/symptom logging.
 
-const CACHE_VERSION = "nutrimama-v2";
+const CACHE_VERSION = "nutrimama-v3";
+// Only precache the public shell + offline fallback. Dashboard pages are
+// authenticated and personalized — caching them risks leaking one user's
+// data to another on shared devices.
 const PRECACHE_URLS = [
   "/",
   "/manifest.webmanifest",
   "/NutriLogo.svg",
   "/offline.html",
-  "/dashboard",
-  "/dashboard/meals",
-  "/dashboard/cycle",
-  "/dashboard/wellness",
 ];
 
 self.addEventListener("install", (event) => {
@@ -38,21 +37,49 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  // Never cache /api or auth endpoints — health data must be fresh.
+  // Never cache /api, auth, or authenticated dashboard HTML — health data
+  // must be fresh and per-user. Static /_next assets and the public shell
+  // can be cached safely.
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/auth")) return;
+  if (url.pathname.startsWith("/dashboard")) {
+    // Network-only for dashboard pages, with offline fallback only.
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline.html")),
+    );
+    return;
+  }
+
+  // Only cache "safe" GETs: static assets, images, fonts, and the marketing
+  // shell. Skip anything that looks like an HTML document for an
+  // authenticated route just to be safe.
+  const isStaticAsset =
+    url.pathname.startsWith("/_next/") ||
+    url.pathname.startsWith("/icons/") ||
+    /\.(?:png|jpg|jpeg|svg|webp|woff2?|ico|css|js)$/i.test(url.pathname);
 
   event.respondWith(
     fetch(request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
+        // Only cache opaque-safe, 200-OK static assets.
+        if (isStaticAsset && res.ok && res.type === "basic") {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
+        }
         return res;
       })
       .catch(() =>
         caches.match(request).then((hit) => hit ?? caches.match("/offline.html")),
       ),
   );
+});
+
+// Allow the page to trigger immediate activation after a new SW is found
+// (paired with sw-register update flow).
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // ─── Local push notifications (zero-cost, no web-push) ──────────

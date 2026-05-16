@@ -83,8 +83,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       className={cn(
         "bg-[#FDFCFB] dark:bg-background text-foreground transition-colors duration-300",
         pathname === "/dashboard/chat"
-          ? "h-screen overflow-hidden print:h-auto print:overflow-visible"
-          : "min-h-screen",
+          ? "h-[100dvh] overflow-hidden print:h-auto print:overflow-visible"
+          : "min-h-[100dvh]",
       )}
     >
       {/* Premium Top Navigation */}
@@ -133,11 +133,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          {/* Right Actions */}
-          <div className="flex items-center space-x-3 md:space-x-4">
+          {/* Right Actions — icons paired with aria-labels so screen readers
+              and assistive tech announce them. Visible labels on md+ desktop
+              so power users see "Profile" vs guessing the avatar. */}
+          <div className="flex items-center space-x-2 md:space-x-3">
             <button
               type="button"
-              className="p-2.5 rounded-full hover:bg-muted relative"
+              aria-label="Notifications"
+              title="Notifications"
+              className="min-w-11 min-h-11 p-2.5 rounded-full hover:bg-muted relative flex items-center justify-center"
             >
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-white dark:border-background" />
@@ -145,9 +149,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <ThemeToggle />
             <Link
               href="/dashboard/profile"
-              className="w-10 h-10 rounded-full bg-primary/10 border-2 border-white dark:border-border overflow-hidden flex items-center justify-center text-primary font-bold shadow-sm hover:scale-105 transition-transform"
+              aria-label="Open your profile"
+              title="Profile"
+              className="min-w-11 min-h-11 rounded-full bg-primary/10 border-2 border-white dark:border-border flex items-center justify-center text-primary font-bold shadow-sm hover:scale-105 transition-transform px-2"
             >
-              <User className="w-5 h-5" />
+              <User className="w-5 h-5" aria-hidden />
+              <span className="hidden lg:inline text-sm ml-1.5">Profile</span>
             </Link>
           </div>
         </div>
@@ -158,8 +165,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         className={cn(
           "mx-auto transition-all duration-500",
           pathname === "/dashboard/chat"
-            ? "max-w-none h-[calc(100vh-5rem)] py-0 overflow-hidden"
-            : "max-w-7xl py-12 md:py-16 px-6",
+            ? "max-w-none h-[calc(100dvh-5rem)] py-0 overflow-hidden"
+            : "max-w-7xl py-8 md:py-16 px-4 sm:px-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-16",
         )}
       >
         <div
@@ -189,7 +196,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               )}
             >
               <item.icon className={cn("h-5 w-5", isActive && "scale-110 transition-transform")} />
-              <span className="text-[10px] font-semibold tracking-wide">
+              <span className="text-[11px] font-semibold tracking-wide">
                 {item.label}
               </span>
             </Link>
@@ -210,7 +217,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           )}
         >
           <MoreHorizontal className="h-5 w-5" />
-          <span className="text-[10px] font-semibold tracking-wide">More</span>
+          <span className="text-[11px] font-semibold tracking-wide">More</span>
         </button>
       </nav>
 

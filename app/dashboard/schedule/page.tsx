@@ -29,8 +29,18 @@ export default function SchedulePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div
+        className="flex flex-col h-full items-center justify-center gap-3 min-h-[60vh]"
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"
+          aria-hidden
+        />
+        <p className="text-sm text-muted-foreground font-medium">
+          Loading your reminders…
+        </p>
       </div>
     );
   }
