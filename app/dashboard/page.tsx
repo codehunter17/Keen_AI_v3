@@ -10,6 +10,7 @@ import { VoiceMic } from "@/components/voice-mic";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import { BadgeShelf } from "@/components/badge-shelf";
 import { QuickActionsFab } from "@/components/quick-actions-fab";
+import { QuickActionsSection } from "@/components/quick-actions-section";
 
 export default function DashboardRoot() {
   return (
@@ -19,6 +20,12 @@ export default function DashboardRoot() {
       {/* Hero */}
       <Suspense fallback={null}>
         <DailyPlan />
+      </Suspense>
+
+      {/* One-tap quick log — mood + hydration + 4 shortcuts.
+          Sits high on the page so it's the first thing thumb-reachable. */}
+      <Suspense fallback={null}>
+        <QuickActionsSection />
       </Suspense>
 
       {/* Pregnancy mode (renders only if user is pregnant) */}

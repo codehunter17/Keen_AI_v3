@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getRecommendedContent } from "@/lib/actions/content";
 import { pickDaily, DAILY_FACTS } from "@/lib/daily";
+import { CONDITIONS } from "@/lib/conditions";
 
 export const metadata = { title: "Learn · NutriMama" };
 
@@ -39,6 +41,60 @@ export default async function LearnPage() {
           Source · {fact.source}
         </p>
       </div>
+
+      {/* Health Library — NutriMama's 30 curated condition guides.
+          Pulled from lib/conditions.ts so we always have rich, scannable
+          content regardless of whether external articles are seeded. */}
+      <section className="mb-8 space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-heading text-xl text-foreground">Health library</h2>
+          <Link
+            href="/dashboard/remedies"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            See all 30 →
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-1.5">
+          Gharelu home remedies, Ayurvedic options, and modern guidance —
+          cited and reviewed.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CONDITIONS.slice(0, 9).map((c) => (
+            <Link
+              key={c.id}
+              href={`/dashboard/remedies/${c.slug}`}
+              className="group rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-primary/30 transition p-4 flex gap-3 active:scale-[0.99]"
+            >
+              <div className="text-3xl shrink-0 leading-none mt-0.5" aria-hidden>
+                {c.emoji}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-heading text-sm font-bold text-foreground truncate">
+                  {c.name}
+                </h3>
+                {c.nameHi && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {c.nameHi}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground/90 mt-1 line-clamp-2 leading-relaxed">
+                  {c.summary}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <header className="mb-3">
+        <h2 className="font-heading text-xl text-foreground">
+          Articles &amp; videos
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Hand-picked for your stage.
+        </p>
+      </header>
 
       {items.length === 0 ? (
         <div className="rounded-2xl bg-card lift p-8 text-center">

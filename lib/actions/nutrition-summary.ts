@@ -38,6 +38,129 @@ export interface TodaySummary {
   };
 }
 
+// 7-day nutrition rollup used by the Meals Stats tab. Deterministic — no LLM.
+export interface WeekStats {
+  daysLogged: number;
+  totalMeals: number;
+  avgWaterMl: number;
+  hitRate: {
+    iron: number;     // % of days target met
+    calcium: number;
+    folate: number;
+    protein: number;
+    water: number;
+  };
+  topFoods: { name: string; count: number }[];
+  missingNutrients: ("iron" | "calcium" | "folate" | "protein" | "water")[];
+}
+
+export async function getWeekNutritionStats(): Promise<WeekStats | null> {
+  const s = await auth.api.getSession({ headers: await headers() });
+  if (!s) return null;
+  const userId = s.user.id;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { lifeStage: true, age: true, pregnancyWeek: true },
+  });
+
+  const since = startOfDay(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+  const logs = await prisma.dailyLog.findMany({
+    where: { userId, date: { gte: since } },
+    select: { meals: true, waterGlasses: true },
+  });
+
+  if (logs.length === 0) {
+    return {
+      daysLogged: 0,
+      totalMeals: 0,
+      avgWaterMl: 0,
+      hitRate: { iron: 0, calcium: 0, folate: 0, protein: 0, water: 0 },
+      topFoods: [],
+      missingNutrients: [],
+    };
+  }
+
+  let totalMeals = 0;
+  let waterMlSum = 0;
+  const foodCounts = new Map<string, number>();
+  const dailyHits = { iron: 0, calcium: 0, folate: 0, protein: 0, water: 0 };
+
+  for (const log of logs) {
+    const meals = parseMealsField(log.meals);
+    const mealsByType: Record<string, string[]> = {};
+    for (const m of meals) {
+      mealsByType[m.type] = (mealsByType[m.type] ?? []).concat(m.items);
+      for (const item of m.items) {
+        foodCounts.set(item, (foodCounts.get(item) ?? 0) + 1);
+      }
+      totalMeals++;
+    }
+    const waterGlasses = log.waterGlasses ?? 0;
+    const intake = intakeFromMealLabels(mealsByType, waterGlasses);
+    waterMlSum += waterGlasses * 250;
+    const hits = checkTargets(intake, {
+      age: user?.age ?? null,
+      lifeStage: (user?.lifeStage as LifeStage | null) ?? null,
+      pregnancyWeek: user?.pregnancyWeek ?? null,
+    });
+    if (hits.iron) dailyHits.iron++;
+    if (hits.calcium) dailyHits.calcium++;
+    if (hits.folate) dailyHits.folate++;
+    if (hits.protein) dailyHits.protein++;
+    if (hits.water) dailyHits.water++;
+  }
+
+  const daysLogged = logs.length;
+  const hitRate = {
+    iron: Math.round((dailyHits.iron / daysLogged) * 100),
+    calcium: Math.round((dailyHits.calcium / daysLogged) * 100),
+    folate: Math.round((dailyHits.folate / daysLogged) * 100),
+    protein: Math.round((dailyHits.protein / daysLogged) * 100),
+    water: Math.round((dailyHits.water / daysLogged) * 100),
+  };
+  const missingNutrients = (
+    ["iron", "calcium", "folate", "protein", "water"] as const
+  ).filter((n) => hitRate[n] < 50);
+  const topFoods = [...foodCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({ name, count }));
+
+  return {
+    daysLogged,
+    totalMeals,
+    avgWaterMl: Math.round(waterMlSum / daysLogged),
+    hitRate,
+    topFoods,
+    missingNutrients,
+  };
+}
+
+function parseMealsField(v: unknown): { type: string; items: string[] }[] {
+  if (!v) return [];
+  const parsed = typeof v === "string" ? safeJson(v) : v;
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((m): m is { type: string; items: string[] } =>
+      typeof m === "object" &&
+      m !== null &&
+      "items" in m &&
+      Array.isArray((m as { items: unknown }).items),
+    )
+    .map((m) => ({
+      type: typeof m.type === "string" ? m.type : "meal",
+      items: m.items.filter((x): x is string => typeof x === "string"),
+    }));
+}
+
+function safeJson(s: string): unknown {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
 export async function getTodayNutritionSummary(): Promise<TodaySummary | null> {
   const s = await auth.api.getSession({ headers: await headers() });
   if (!s) return null;
