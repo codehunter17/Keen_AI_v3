@@ -2,6 +2,7 @@
 // remedy of the day + streak. Drop into the dashboard root page.
 
 import { displayFirstName } from "@/lib/display-name";
+import { timeOfDayGreeting } from "@/lib/languages";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +25,7 @@ export async function DailyPlan() {
       lifeStage: true,
       cycleStage: true,
       tier: true,
+      languagePref: true,
     },
   });
   if (!u?.dob) return null;
@@ -50,12 +52,7 @@ export async function DailyPlan() {
   const remedyKey = nutrients[new Date().getDate() % nutrients.length];
   const remedy = DEFICIENCY_REMEDIES[remedyKey];
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  })();
+  const greeting = timeOfDayGreeting(u.languagePref);
 
   return (
     <section className="rounded-2xl surface-premium lift-strong p-5 sm:p-6">

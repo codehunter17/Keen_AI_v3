@@ -11,9 +11,32 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+import { isSupportedLanguage } from "@/lib/languages";
+
 async function requireUserId(): Promise<string | null> {
   const s = await auth.api.getSession({ headers: await headers() });
   return s?.user.id ?? null;
+}
+
+/**
+ * Change the user's preferred display language. The chat AI also reads
+ * this off the user record to decide which language to respond in.
+ * Validates against the supported-languages registry — never writes
+ * an arbitrary string.
+ */
+export async function setLanguagePreference(
+  code: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const userId = await requireUserId();
+  if (!userId) return { ok: false, reason: "UNAUTHORIZED" };
+  if (!isSupportedLanguage(code)) {
+    return { ok: false, reason: "UNSUPPORTED_LANGUAGE" };
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { languagePref: code },
+  });
+  return { ok: true };
 }
 
 /**

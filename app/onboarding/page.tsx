@@ -66,7 +66,11 @@ export default async function OnboardingPage() {
   const initial: OnboardingInitial = {
     name: cleanedName,
     dob: user.dob ? user.dob.toISOString().slice(0, 10) : "",
-    language: (user.languagePref === "hi" ? "hi" : "en"),
+    language: (
+      ["en", "hi", "ta", "te", "bn", "mr"].includes(user.languagePref ?? "")
+        ? (user.languagePref as OnboardingInitial["language"])
+        : "en"
+    ),
     lifeStage: (user.lifeStage as LifeStage) ?? null,
     pregnancyWeek: typeof user.pregnancyWeek === "number" ? user.pregnancyWeek : "",
     heightCm: user.height ?? undefined,

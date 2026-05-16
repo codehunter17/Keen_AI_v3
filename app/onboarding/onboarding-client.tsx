@@ -11,6 +11,7 @@ import {
   setVitals,
   acceptConsents,
 } from "@/lib/actions/lifecycle";
+import { LANGUAGES, type LanguageCode } from "@/lib/languages";
 
 // Life-stage-aware onboarding. Steps the user has already completed
 // (DOB, life stage, vitals, consents) are skipped — see page.tsx for
@@ -43,7 +44,7 @@ const LIFE_STAGE_OPTIONS: {
 export type OnboardingInitial = {
   name: string;                      // "" if unset OR was a phone-shaped placeholder
   dob: string;                       // "" if not set, else ISO yyyy-mm-dd
-  language: "en" | "hi";
+  language: LanguageCode;
   lifeStage: LifeStage | null;
   pregnancyWeek: number | "";
   heightCm: number | undefined;
@@ -68,7 +69,7 @@ export function OnboardingClient({
   // Prefilled from server — user never re-enters anything they already saved.
   const [name, setName] = useState(initial.name);
   const [dob, setDob] = useState(initial.dob);
-  const [language, setLanguage] = useState<"en" | "hi">(initial.language);
+  const [language, setLanguage] = useState<LanguageCode>(initial.language);
   const [lifeStage, setLifeStageVal] = useState<LifeStage | null>(initial.lifeStage);
   const [pregnancyWeek, setPregnancyWeek] = useState<number | "">(initial.pregnancyWeek);
   const [heightCm, setHeightCm] = useState<number | undefined>(initial.heightCm);
@@ -198,15 +199,24 @@ export function OnboardingClient({
                 </p>
 
                 <label className="mt-5 block text-sm font-medium">Language</label>
-                <div className="mt-1 flex gap-2">
-                  {(["en", "hi"] as const).map((l) => (
+                <p className="text-[11px] text-muted-foreground">
+                  Pick the language you read most easily.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {LANGUAGES.map((l) => (
                     <button
-                      key={l}
+                      key={l.code}
                       type="button"
-                      onClick={() => setLanguage(l)}
-                      className={`chip cursor-pointer ${language === l ? "chip-active" : ""}`}
+                      onClick={() => setLanguage(l.code)}
+                      className={`h-11 px-4 rounded-full border text-sm font-semibold transition-all ${
+                        language === l.code
+                          ? "bg-primary text-white border-primary"
+                          : "bg-card text-foreground border-border hover:border-primary/40"
+                      }`}
+                      aria-pressed={language === l.code}
+                      aria-label={`Set language to ${l.label}`}
                     >
-                      {l === "en" ? "English" : "हिन्दी"}
+                      {l.native}
                     </button>
                   ))}
                 </div>

@@ -14,6 +14,7 @@
 import { useState, useTransition } from "react";
 import { displayName, displayInitial } from "@/lib/display-name";
 import { NameEditor } from "@/components/name-editor";
+import { LanguagePicker } from "@/components/language-picker";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cancelSubscription } from "@/lib/actions/subscription";
@@ -229,26 +230,8 @@ export function SettingsClient({
 
       {/* ── Settings list (keen-ai parity) ─────────────────────── */}
       <section className="rounded-3xl bg-card border border-border overflow-hidden divide-y divide-border">
-        {/* Language */}
-        <Row
-          icon={<Globe className="w-4 h-4 text-emerald-600" />}
-          label="Language"
-          right={
-            <span className="text-sm text-foreground/70">
-              {user.languagePref === "hi"
-                ? "हिन्दी"
-                : user.languagePref === "ta"
-                  ? "தமிழ்"
-                  : user.languagePref === "te"
-                    ? "తెలుగు"
-                    : user.languagePref === "bn"
-                      ? "বাংলা"
-                      : user.languagePref === "mr"
-                        ? "मराठी"
-                        : "English"}
-            </span>
-          }
-        />
+        {/* Language — opens a picker modal */}
+        <LanguagePicker currentCode={user.languagePref} />
 
         {/* Dark Mode — uses the existing ThemeToggle component */}
         <Row
