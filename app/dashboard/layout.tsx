@@ -3,7 +3,9 @@ import { ReactNode } from "react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
-import { ServiceWorkerRegister } from "@/components/sw-register";
+// SW + PwaInstallPrompt moved to app/layout.tsx so they mount on EVERY
+// page (including the landing /) — required for Chrome's PWA install
+// criteria to fire on first visit.
 import { OfflineBootstrap } from "@/components/offline-bootstrap";
 import { ensureRealName } from "@/lib/server/ensure-real-name";
 
@@ -34,7 +36,6 @@ export default async function DashboardLayout({
 
   return (
     <>
-      <ServiceWorkerRegister />
       <OfflineBootstrap />
       <DashboardShell>{children}</DashboardShell>
     </>

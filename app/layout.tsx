@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
 import { Suspense } from "react";
 import { Loader } from "@/components/ui/loader";
+import { ServiceWorkerRegister } from "@/components/sw-register";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 
 // Fraunces — modern editorial serif with a soft, premium-health feel.
 // Inter — clean, highly legible body type. Together they read distinctly
@@ -73,6 +75,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
+          {/* SW must register on EVERY page (not just /dashboard) so the
+              landing-page visit at "/" already counts toward Chrome's PWA
+              install criteria. Without this, Add to Home Screen never
+              fires for first-time visitors. */}
+          <ServiceWorkerRegister />
+          <PwaInstallPrompt />
           <Suspense fallback={<Loader />}>{children}</Suspense>
         </Providers>
       </body>
