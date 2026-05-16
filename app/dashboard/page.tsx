@@ -11,6 +11,7 @@ import { NotificationPrompt } from "@/components/notification-prompt";
 import { BadgeShelf } from "@/components/badge-shelf";
 import { QuickActionsFab } from "@/components/quick-actions-fab";
 import { QuickActionsSection } from "@/components/quick-actions-section";
+import { ModeSwitcherSection } from "@/components/mode-switcher-section";
 
 export default function DashboardRoot() {
   return (
@@ -26,6 +27,12 @@ export default function DashboardRoot() {
           Sits high on the page so it's the first thing thumb-reachable. */}
       <Suspense fallback={null}>
         <QuickActionsSection />
+      </Suspense>
+
+      {/* 3-card mode switcher — Cycle / Nutrition / Pregnancy. Auto-picks
+          which card is the "primary" (largest) based on user's lifeStage. */}
+      <Suspense fallback={null}>
+        <ModeSwitcherSection />
       </Suspense>
 
       {/* Pregnancy mode (renders only if user is pregnant) */}

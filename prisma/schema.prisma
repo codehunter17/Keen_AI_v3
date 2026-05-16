@@ -416,6 +416,9 @@ model DailyLog {
   otherFluids  Json?
   activity     String?
   mood         String?
+  // Intercourse log (boolean per day). Stored privately — never sent to
+  // the AI prompt, never shared with partners or dependents.
+  intimate     Boolean  @default(false)
   // Structured payload from the morning 4-step Daily Check-in
   // { mealsPlanned, supplements, waterTargetL, symptoms, completedAt }
   checkin      Json?

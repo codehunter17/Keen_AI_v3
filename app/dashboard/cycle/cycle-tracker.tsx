@@ -16,6 +16,8 @@ import {
   getDay,
 } from "date-fns";
 import { LiveCycleRing } from "@/components/live-cycle-ring";
+import { FertilityPhaseCard } from "@/components/fertility-phase-card";
+import { IntimacyToggle } from "@/components/intimacy-toggle";
 import { cn } from "@/lib/utils";
 
 type CycleTab = "today" | "calendar" | "analysis";
@@ -56,9 +58,11 @@ const COMMON_SYMPTOMS = [
 export function CycleTracker({
   history,
   prediction,
+  intimacyLoggedToday = false,
 }: {
   history: CycleEntry[];
   prediction: Prediction;
+  intimacyLoggedToday?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -173,7 +177,16 @@ export function CycleTracker({
       {/* Live cycle ring — large, animated, interactive. Shows the user
           where she is in her cycle at a glance. Compute today's cycle day
           from the most-recent period start in history. */}
-      {tab === "today" && <>
+      {tab === "today" && (() => {
+        const lastStart = prediction.lastStart
+          ? new Date(prediction.lastStart)
+          : history[0]?.startDate
+            ? new Date(history[0].startDate)
+            : null;
+        const cycleDayOuter = lastStart
+          ? Math.max(1, differenceInCalendarDays(new Date(), lastStart) + 1)
+          : null;
+        return <>
       <section className="rounded-3xl bg-card border border-border lift p-6 sm:p-8 pb-12">
         {(() => {
           const lastStart = prediction.lastStart
@@ -199,6 +212,17 @@ export function CycleTracker({
           );
         })()}
       </section>
+
+      {/* 4-phase fertility view — Menstrual / Follicular / Ovulatory /
+          Luteal. Renders the phase-specific nutrition + activity guidance.
+          Shows a tasteful empty state if there's no period start yet. */}
+      <FertilityPhaseCard
+        cycleDay={cycleDayOuter}
+        averageLength={prediction.averageLengthDays ?? 28}
+      />
+
+      {/* Discreet intercourse log — collapsed by default, privacy-first */}
+      <IntimacyToggle initialLogged={intimacyLoggedToday} />
 
       {/* Prediction hero */}
       <section className="rounded-2xl surface-premium lift-strong p-6">
@@ -356,7 +380,8 @@ export function CycleTracker({
           </div>
         </section>
       )}
-      </>}
+        </>;
+      })()}
 
       {/* ── Calendar tab — 8-week mini grid of past + predicted periods ── */}
       {tab === "calendar" && (

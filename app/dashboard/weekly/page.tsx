@@ -5,6 +5,7 @@
 import { getWeeklyReport } from "@/lib/actions/weekly-report";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
+import { getWeekNutritionStats } from "@/lib/actions/nutrition-summary";
 import {
   Calendar,
   Droplets,
@@ -13,13 +14,28 @@ import {
   Sparkles,
   Lock,
   AlertCircle,
+  AlertOctagon,
+  Phone,
   TrendingUp,
 } from "lucide-react";
 
 export const metadata = { title: "Your week — NutriMama" };
 
+// ICMR-NIN-grounded ASHA escalation. If any of iron/calcium/folate hit
+// rate is below 30% this week, we surface the rural-India health-worker
+// callout above the AI story — credibility signature, not for every dip.
+const CRITICAL_THRESHOLD = 30;
+
 export default async function WeeklyPage() {
-  const res = await getWeeklyReport();
+  const [res, nutritionStats] = await Promise.all([
+    getWeeklyReport(),
+    getWeekNutritionStats(),
+  ]);
+  const criticalNutrients = nutritionStats
+    ? (["iron", "calcium", "folate"] as const).filter(
+        (n) => nutritionStats.hitRate[n] < CRITICAL_THRESHOLD,
+      )
+    : [];
 
   if (!res.ok && res.reason === "NO_DATA") {
     return (
@@ -66,6 +82,42 @@ export default async function WeeklyPage() {
           A 7-day snapshot of your logs, mood, and rhythm.
         </p>
       </header>
+
+      {/* ASHA escalation — only when critical, never noisy */}
+      {criticalNutrients.length > 0 && (
+        <section className="rounded-3xl border border-red-300 dark:border-red-800/60 bg-red-50 dark:bg-red-950/30 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-300" />
+            <h2 className="font-heading text-base font-bold text-red-900 dark:text-red-100">
+              Consult your ASHA worker this week
+            </h2>
+          </div>
+          <p className="text-sm text-red-900/90 dark:text-red-100/90 leading-relaxed">
+            <strong>
+              {criticalNutrients.map((n) => n).join(", ")}
+            </strong>{" "}
+            ran critically low (ICMR-NIN RDA &lt; 30% hit rate). Your local
+            ASHA worker can arrange free supplements from the nearest PHC. In
+            pregnancy, persistent deficiency carries real risk — don&apos;t
+            wait it out.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="tel:104"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              Call 104 (Health Helpline)
+            </a>
+            <Link
+              href="/dashboard/meals"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-full border border-red-300 dark:border-red-800 text-red-900 dark:text-red-100 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-950/50 transition"
+            >
+              See nutrition insights →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Numbers strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

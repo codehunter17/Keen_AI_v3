@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ageFromDob } from "@/lib/lifecycle";
 import { getCycleHistory, predictNextCycle } from "@/lib/actions/cycle";
+import { getIntimacyToday } from "@/lib/actions/intimacy";
 import { CycleTracker } from "./cycle-tracker";
 
 export const metadata = { title: "Cycle · NutriMama" };
@@ -21,9 +22,10 @@ export default async function CyclePage() {
   const age = ageFromDob(user.dob);
   if (age < 18) redirect("/dashboard");
 
-  const [history, prediction] = await Promise.all([
+  const [history, prediction, intimacyToday] = await Promise.all([
     getCycleHistory({ limit: 12 }),
     predictNextCycle(),
+    getIntimacyToday(),
   ]);
 
   return (
@@ -47,6 +49,7 @@ export default async function CyclePage() {
         fertileWindowEnd: prediction.fertileWindowEnd?.toISOString() ?? null,
         confidence: prediction.confidence,
       }}
+      intimacyLoggedToday={intimacyToday}
     />
   );
 }
