@@ -3,6 +3,7 @@
   "short_name": "NutriMama",
   "description": "AI-powered women's health from first period to motherhood.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FAF7F2",
@@ -13,26 +14,44 @@
   "categories": ["health", "lifestyle", "medical"],
   "icons": [
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/icon-96.png",
+      "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon.png",
-      "sizes": "1024x1024",
+      "src": "/icon-384.png",
+      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
-      "sizes": "1024x1024",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
@@ -41,7 +60,7 @@
     {
       "name": "Cycle tracker",
       "short_name": "Cycle",
-      "url": "/dashboard?tab=cycle",
+      "url": "/dashboard/cycle",
       "description": "Log today's period or symptoms"
     },
     {
@@ -51,10 +70,10 @@
       "description": "Ask the NutriMama AI"
     },
     {
-      "name": "Reports",
-      "short_name": "Reports",
-      "url": "/dashboard/reports",
-      "description": "Upload a medical report"
+      "name": "Remedies",
+      "short_name": "Remedies",
+      "url": "/dashboard/remedies",
+      "description": "30 condition guides"
     }
   ]
 }

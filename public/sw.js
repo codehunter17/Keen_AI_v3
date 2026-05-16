@@ -3,7 +3,7 @@
 // (health data must always be fresh). On request we'll expand once we
 // add a queue for offline cycle/symptom logging.
 
-const CACHE_VERSION = "nutrimama-v3";
+const CACHE_VERSION = "nutrimama-v4";
 // Only precache the public shell + offline fallback. Dashboard pages are
 // authenticated and personalized — caching them risks leaking one user's
 // data to another on shared devices.
