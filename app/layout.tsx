@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { Loader } from "@/components/ui/loader";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { Analytics } from "@vercel/analytics/next";
 
 // Fraunces — modern editorial serif with a soft, premium-health feel.
 // Inter — clean, highly legible body type. Together they read distinctly
@@ -82,6 +83,7 @@ export default function RootLayout({
           <ServiceWorkerRegister />
           <PwaInstallPrompt />
           <Suspense fallback={<Loader />}>{children}</Suspense>
+          <Analytics />
         </Providers>
       </body>
     </html>
