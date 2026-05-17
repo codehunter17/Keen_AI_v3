@@ -22,11 +22,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.razorpay.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.razorpay.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.razorpay.com https://*.razorpay.com https://generativelanguage.googleapis.com https://api.groq.com https://api.anthropic.com https://*.huggingface.co https://*.uploadthing.com https://*.utfs.io",
+      "connect-src 'self' https://api.razorpay.com https://*.razorpay.com https://generativelanguage.googleapis.com https://api.groq.com https://api.anthropic.com https://*.huggingface.co https://*.uploadthing.com https://*.utfs.io https://va.vercel-scripts.com",
       "frame-src 'self' https://api.razorpay.com https://*.razorpay.com",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
