@@ -274,9 +274,11 @@ model ContentItem {
   title          String
   summary        String
   body           String?  // Markdown article body (null for video-only)
-  videoUrl       String?
+  videoUrl       String?  // YouTube embed or direct video URL
+  instagramUrl   String?  // Instagram Reel / post URL
   thumbnailUrl   String?
   durationSec    Int?
+  readTimeMin    Int?     // estimated reading time in minutes
   language       String   @default("en")
 
   // Targeting
@@ -290,6 +292,11 @@ model ContentItem {
   reviewedAt       DateTime?
   source           String? // e.g. "Menstrupedia", "WHO", "ICMR"
   sourceUrl        String?
+
+  // User/admin submitted content
+  isUserSubmitted  Boolean @default(false) // true = user upload (pending moderation)
+  isPublished      Boolean @default(true)  // false = draft / awaiting moderation
+  submittedById    String? // userId of uploader (null = staff/seeded)
 
   views          ContentView[]
   createdAt      DateTime @default(now())

@@ -3,11 +3,9 @@ import { ReactNode } from "react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { DashboardShell } from "./dashboard-shell";
-// SW + PwaInstallPrompt moved to app/layout.tsx so they mount on EVERY
-// page (including the landing /) — required for Chrome's PWA install
-// criteria to fire on first visit.
 import { OfflineBootstrap } from "@/components/offline-bootstrap";
 import { ensureRealName } from "@/lib/server/ensure-real-name";
+import { isAdminEmail, ensureStaffFlag } from "@/lib/admin-emails";
 
 export const metadata: Metadata = {
   title: "Dashboard · NutriMama",
@@ -25,12 +23,17 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  // Run the phone-as-name cleanup once per process per user. Cheap select +
-  // optional update. Runs in parallel with the children rendering so it
-  // doesn't add measurable latency.
   const session = await auth.api.getSession({ headers: await headers() });
+
   if (session?.user.id) {
-    // Fire-and-forget — failure is non-fatal and logged inside.
+    // 1. Auto-promote admin emails → isStaff = true in DB (idempotent, fast).
+    //    This means adding an email to ADMIN_EMAILS env var is all it takes —
+    //    no manual SQL needed. The DB flag is synced lazily on next page load.
+    if (isAdminEmail(session.user.email)) {
+      void ensureStaffFlag(session.user.id);
+    }
+
+    // 2. Clean up phone-shaped names (fire-and-forget, non-fatal).
     void ensureRealName(session.user.id);
   }
 

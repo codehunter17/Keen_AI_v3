@@ -20,8 +20,11 @@ async function requireSession() {
   return session;
 }
 
-// ─── Step 1: capture DOB and confirm 18+ ─────────────────────
-// Strip leading/trailing junk + reject "+91..." style phone-as-name strings.
+// ─── Step 1: capture DOB — open to all ages ──────────────────
+// NutriMama serves users from birth to old age. Age determines which
+// features unlock, not whether you can sign up.
+// Under-18: requires a parental-consent checkbox in the UI (DPDP § 9).
+// Strip phone-shaped values so we never persist "+91…" as a name.
 function isPhoneShaped(s: string): boolean {
   const d = s.replace(/[+\-\s()]/g, "");
   return /^\d{7,15}$/.test(d);
@@ -31,14 +34,15 @@ const setBasicsSchema = z.object({
   dob: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
   countryCode: z.string().length(2).default("IN"),
   languagePref: z.enum(["en", "hi", "ta", "te", "bn", "mr"]).default("en"),
-  // Optional — user can skip and be addressed as "Ma'am". Server rejects
-  // phone-shaped values so we never persist a phone-as-name regression.
   name: z
     .string()
     .trim()
     .max(60, "Name is too long")
     .optional()
     .transform((v) => (v && !isPhoneShaped(v) ? v : undefined)),
+  // Under-18 users must have parental/guardian consent (DPDP Act 2023 § 9).
+  // Adults pass this as undefined / true — it is only validated when age < 18.
+  parentalConsent: z.boolean().optional(),
 });
 
 export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
@@ -47,19 +51,36 @@ export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
 
   const dob = new Date(data.dob);
   const age = ageFromDob(dob);
+  const ageBand = ageBandFromAge(age);
 
-  // Hard guard: under-18 can't open a standalone account.
-  if (age < 18) {
+  // Under-18: parental consent is mandatory (DPDP Act 2023 § 9).
+  if (age < 18 && !data.parentalConsent) {
     return {
       ok: false,
-      reason: "MINOR_NOT_ALLOWED",
+      reason: "PARENTAL_CONSENT_REQUIRED",
       message:
-        "NutriMama accounts are for users 18 and over. If you are under 18, ask a parent to add you as a dependent profile.",
+        "A parent or guardian must give consent before a user under 18 can create an account (DPDP Act 2023).",
     } as const;
   }
 
-  // Only write name if the user actually typed one. Also overwrite any
-  // pre-existing phone-shaped name (the Better Auth phone-OTP default).
+  // Minimum supported age: 4. Below that we can't serve meaningful content.
+  if (age < 4) {
+    return {
+      ok: false,
+      reason: "TOO_YOUNG",
+      message: "NutriMama is designed for users aged 4 and above.",
+    } as const;
+  }
+
+  // Auto-derive lifeStage for children/teens so they never see the adult
+  // life-stage picker (which would be confusing / inappropriate).
+  let autoLifeStage: LifeStage | null = null;
+  if (age >= 4 && age <= 7)  autoLifeStage = "CHILD_4_7";
+  if (age >= 8 && age <= 10) autoLifeStage = "CHILD_8_10";
+  if (age >= 11 && age <= 13) autoLifeStage = "TEEN_11_13";
+  if (age >= 14 && age <= 17) autoLifeStage = "TEEN_14_17";
+
+  // Only write name if the user actually typed one.
   const currentName = (await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { name: true },
@@ -68,7 +89,7 @@ export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
     data.name && data.name.length > 0
       ? data.name
       : isPhoneShaped(currentName)
-        ? "" // wipe the phone, leave blank so UI shows "Ma'am"
+        ? ""
         : undefined;
 
   await prisma.user.update({
@@ -79,15 +100,23 @@ export async function setBasics(input: z.infer<typeof setBasicsSchema>) {
       countryCode: data.countryCode,
       languagePref: data.languagePref,
       ...(nameToWrite !== undefined ? { name: nameToWrite } : {}),
+      // Auto-set life stage for children/teens — skips the step-1 picker.
+      ...(autoLifeStage ? { lifeStage: autoLifeStage as LifeStage } : {}),
     },
   });
 
-  return { ok: true, age, ageBand: ageBandFromAge(age) } as const;
+  return { ok: true, age, ageBand, autoLifeStage } as const;
 }
 
 // ─── Step 2: pick life stage + cycle stage ───────────────────
+// Accepts all life stages including child/teen — adults pick their own,
+// children have theirs auto-set by setBasics() and skip this step.
 const setLifeStageSchema = z.object({
   lifeStage: z.enum([
+    "CHILD_4_7",
+    "CHILD_8_10",
+    "TEEN_11_13",
+    "TEEN_14_17",
     "ADULT_MENSTRUATING",
     "TRYING_TO_CONCEIVE",
     "PREGNANT",
@@ -129,7 +158,7 @@ export async function setLifeStage(input: z.infer<typeof setLifeStageSchema>) {
 // ─── Step 3: optional vitals (used by ML risk model later) ───
 const setVitalsSchema = z.object({
   height: z.number().min(80).max(230).optional(),
-  weight: z.number().min(25).max(250).optional(),
+  weight: z.number().min(12).max(250).optional(), // 12 kg covers a 4-yr-old child
   dietaryPref: z.enum(["VEGETARIAN", "VEGAN", "NON_VEG"]).optional(),
   regionalPref: z.enum(["INDIAN", "WESTERN", "ASIAN"]).optional(),
 });

@@ -1,4 +1,9 @@
 import { Suspense } from "react";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { ChildOverview } from "./child-overview";
+import { TeenOverview } from "./teen-overview";
 import OverviewClient from "./overview-client";
 import { DailyPlan } from "@/components/daily-plan";
 import { CycleRing } from "@/components/cycle-ring";
@@ -13,7 +18,24 @@ import { QuickActionsFab } from "@/components/quick-actions-fab";
 import { QuickActionsSection } from "@/components/quick-actions-section";
 import { ModeSwitcherSection } from "@/components/mode-switcher-section";
 
-export default function DashboardRoot() {
+export default async function DashboardRoot() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/auth/sign-in");
+
+  const lifeStage = (session.user as any).lifeStage as string | undefined;
+  const name = session.user.name ?? "";
+
+  // ── Under-12: body safety + nutrition only ────────────────────────────
+  if (lifeStage?.startsWith("CHILD_")) {
+    return <ChildOverview name={name} />;
+  }
+
+  // ── Teens 12–17: cycle + nutrition + wellness, no AI ─────────────────
+  if (lifeStage?.startsWith("TEEN_")) {
+    return <TeenOverview name={name} lifeStage={lifeStage} />;
+  }
+
+  // ── Adults 18+: full dashboard ────────────────────────────────────────
   return (
     <div className="space-y-6 w-full max-w-7xl mx-auto">
       <NotificationPrompt />
@@ -23,24 +45,22 @@ export default function DashboardRoot() {
         <DailyPlan />
       </Suspense>
 
-      {/* One-tap quick log — mood + hydration + 4 shortcuts.
-          Sits high on the page so it's the first thing thumb-reachable. */}
+      {/* One-tap quick log */}
       <Suspense fallback={null}>
         <QuickActionsSection />
       </Suspense>
 
-      {/* 3-card mode switcher — Cycle / Nutrition / Pregnancy. Auto-picks
-          which card is the "primary" (largest) based on user's lifeStage. */}
+      {/* Mode switcher — Cycle / Nutrition / Pregnancy */}
       <Suspense fallback={null}>
         <ModeSwitcherSection />
       </Suspense>
 
-      {/* Pregnancy mode (renders only if user is pregnant) */}
+      {/* Pregnancy visualizer (shows only if pregnant) */}
       <Suspense fallback={null}>
         <PregnancyVisualizer />
       </Suspense>
 
-      {/* Cycle ring + BMI card side by side */}
+      {/* Cycle ring + BMI card */}
       <div className="grid lg:grid-cols-2 gap-4">
         <Suspense fallback={null}>
           <CycleRing />
@@ -66,10 +86,10 @@ export default function DashboardRoot() {
         <BadgeShelf />
       </Suspense>
 
-      {/* Existing overview (legacy widgets) */}
+      {/* Legacy overview widgets */}
       <OverviewClient />
 
-      {/* Always-visible quick action FAB */}
+      {/* Floating quick-action button */}
       <QuickActionsFab />
     </div>
   );

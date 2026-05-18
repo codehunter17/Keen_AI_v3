@@ -10,6 +10,34 @@
 //   - NIMHANS Mental Health Guidelines
 
 export const ICMR_RDA = {
+  // ── Children — ICMR-NIN RDA 2020 ──────────────────────────────────────────
+  child_4_6: {
+    iron_mg: 13,
+    calcium_mg: 600,
+    folate_mcg: 200,
+    protein_g: 20,
+    kcal: 1350,
+    water_l: 1.3,
+    source: "ICMR-NIN RDA 2020",
+  },
+  child_7_9: {
+    iron_mg: 16,
+    calcium_mg: 600,
+    folate_mcg: 200,
+    protein_g: 29,
+    kcal: 1690,
+    water_l: 1.7,
+    source: "ICMR-NIN RDA 2020",
+  },
+  child_10_12: {
+    iron_mg: 21,
+    calcium_mg: 800,
+    folate_mcg: 300,
+    protein_g: 36,
+    kcal: 2010,
+    water_l: 2.0,
+    source: "ICMR-NIN RDA 2020",
+  },
   pregnant: {
     iron_mg: { T1: 27, T2: 30, T3: 38, general: 35 },
     calcium_mg: { T1: 1000, T2: 1200, T3: 1200 },

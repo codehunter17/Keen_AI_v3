@@ -65,7 +65,12 @@ export default function ChatPage() {
     Record<string, boolean>
   >({});
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Default sidebar open only on desktop (md = 768px). Runs once on mount.
+  useEffect(() => {
+    setIsSidebarOpen(window.innerWidth >= 768);
+  }, []);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitError, setLimitError] = useState("");

@@ -110,8 +110,49 @@ interface TargetsInput {
 
 export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
   const tri = computeTrimester(input.pregnancyWeek);
+  const age = input.age ?? null;
+  const ls  = input.lifeStage ?? "";
 
-  if (input.lifeStage === "PREGNANT" && tri) {
+  // ── Children 4–12 ────────────────────────────────────────────────────────
+  // ICMR-NIN RDA 2020. Calorie + protein scale with age band;
+  // iron / calcium are critically high relative to body size.
+  if (ls === "CHILD_4_7" || (age != null && age >= 4 && age <= 7)) {
+    const r = age != null && age >= 6 ? ICMR_RDA.child_7_9 : ICMR_RDA.child_4_6;
+    return {
+      iron_mg: r.iron_mg,
+      calcium_mg: r.calcium_mg,
+      folate_mcg: r.folate_mcg,
+      protein_g: r.protein_g,
+      DHA_mg: null,
+      water_l: r.water_l,
+    };
+  }
+  if (ls === "CHILD_8_10" || (age != null && age >= 8 && age <= 10)) {
+    const r = ICMR_RDA.child_7_9;
+    return {
+      iron_mg: r.iron_mg,
+      calcium_mg: r.calcium_mg,
+      folate_mcg: r.folate_mcg,
+      protein_g: r.protein_g,
+      DHA_mg: null,
+      water_l: r.water_l,
+    };
+  }
+  // 11-12: use child_10_12 (bridge between child and teen)
+  if (age != null && age >= 11 && age <= 12) {
+    const r = ICMR_RDA.child_10_12;
+    return {
+      iron_mg: r.iron_mg,
+      calcium_mg: r.calcium_mg,
+      folate_mcg: r.folate_mcg,
+      protein_g: r.protein_g,
+      DHA_mg: null,
+      water_l: r.water_l,
+    };
+  }
+
+  // ── Pregnant ─────────────────────────────────────────────────────────────
+  if (ls === "PREGNANT" && tri) {
     const r = ICMR_RDA.pregnant;
     return {
       iron_mg: r.iron_mg[tri],
@@ -122,7 +163,9 @@ export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
       water_l: 3.0,
     };
   }
-  if (input.lifeStage === "POSTPARTUM") {
+
+  // ── Postpartum / nursing ─────────────────────────────────────────────────
+  if (ls === "POSTPARTUM") {
     const r = ICMR_RDA.postpartum;
     return {
       iron_mg: r.iron_mg,
@@ -133,7 +176,9 @@ export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
       water_l: r.water_L,
     };
   }
-  if ((input.lifeStage ?? "").startsWith("TEEN") || (input.age != null && input.age <= 17)) {
+
+  // ── Teens 13–17 ──────────────────────────────────────────────────────────
+  if (ls.startsWith("TEEN") || (age != null && age >= 13 && age <= 17)) {
     const r = ICMR_RDA.teen_13_17;
     return {
       iron_mg: r.iron_mg,
@@ -144,7 +189,9 @@ export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
       water_l: 2.5,
     };
   }
-  if (input.lifeStage === "MENOPAUSE" || (input.age != null && input.age >= 45)) {
+
+  // ── Menopause / perimenopause ────────────────────────────────────────────
+  if (ls === "MENOPAUSE" || ls === "PERIMENOPAUSE" || (age != null && age >= 45)) {
     const r = ICMR_RDA.menopause;
     return {
       iron_mg: 21,
@@ -155,7 +202,8 @@ export function computeTargets(input: TargetsInput): PhasePayload["targets"] {
       water_l: 2.5,
     };
   }
-  // Default adult menstruating
+
+  // ── Default adult (menstruating, TTC, PCOS) ───────────────────────────────
   const r = ICMR_RDA.adult_18_45;
   return {
     iron_mg: r.iron_mg,

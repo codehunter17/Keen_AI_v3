@@ -20,6 +20,8 @@ import {
   Apple,
   MoreHorizontal,
   X,
+  ShieldCheck,
+  ShieldHeart,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TierBadge } from "@/components/tier-badge";
@@ -28,38 +30,54 @@ import { cn } from "@/lib/utils";
 import { DailyCheckIn } from "@/components/daily-check-in";
 import { Loader } from "@/components/ui/loader";
 
-const NAV_ITEMS = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Cycle", href: "/dashboard/cycle", icon: Heart },
-  { label: "Pregnancy", href: "/dashboard/pregnancy", icon: Heart },
-  { label: "Wellness", href: "/dashboard/wellness", icon: Droplets },
-  { label: "Meals", href: "/dashboard/meals", icon: Apple },
-  { label: "Self-care", href: "/dashboard/selfcare", icon: Leaf },
-  { label: "Remedies", href: "/dashboard/remedies", icon: Sparkles },
-  { label: "Chat", href: "/dashboard/chat", icon: MessageSquare },
-  { label: "Weekly", href: "/dashboard/weekly", icon: FileText },
-  { label: "Learn", href: "/dashboard/learn", icon: BookOpen },
-  { label: "Reports", href: "/dashboard/reports", icon: FileText },
-  { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
+// All possible nav items — filtered per age band at render time.
+const ALL_NAV_ITEMS = [
+  { label: "Overview",    href: "/dashboard",            icon: LayoutDashboard, bands: ["child","teen","adult"] },
+  { label: "Body Safety", href: "/dashboard/body-safety",icon: ShieldHeart,     bands: ["child"] },
+  { label: "Cycle",       href: "/dashboard/cycle",      icon: Heart,           bands: ["teen","adult"] },
+  { label: "Pregnancy",   href: "/dashboard/pregnancy",  icon: Heart,           bands: ["adult"] },
+  { label: "Wellness",    href: "/dashboard/wellness",   icon: Droplets,        bands: ["teen","adult"] },
+  { label: "Meals",       href: "/dashboard/meals",      icon: Apple,           bands: ["child","teen","adult"] },
+  { label: "Self-care",   href: "/dashboard/selfcare",   icon: Leaf,            bands: ["teen","adult"] },
+  { label: "Remedies",    href: "/dashboard/remedies",   icon: Sparkles,        bands: ["teen","adult"] },
+  { label: "Chat",        href: "/dashboard/chat",       icon: MessageSquare,   bands: ["adult"] },
+  { label: "Weekly",      href: "/dashboard/weekly",     icon: FileText,        bands: ["adult"] },
+  { label: "Learn",       href: "/dashboard/learn",      icon: BookOpen,        bands: ["child","teen","adult"] },
+  { label: "Reports",     href: "/dashboard/reports",    icon: FileText,        bands: ["adult"] },
+  { label: "Inbox",       href: "/dashboard/inbox",      icon: Inbox,           bands: ["adult"] },
+  { label: "Settings",    href: "/dashboard/settings",   icon: Settings,        bands: ["child","teen","adult"] },
 ];
 
-// Mobile bottom nav shows only the 4 most-used destinations + a "More"
-// button. Anything not in this list lives in the More sheet.
-const MOBILE_PRIMARY_HREFS = new Set([
-  "/dashboard",
-  "/dashboard/cycle",
-  "/dashboard/chat",
-  "/dashboard/meals",
-]);
-const MOBILE_PRIMARY = NAV_ITEMS.filter((i) => MOBILE_PRIMARY_HREFS.has(i.href));
-const MOBILE_SECONDARY = NAV_ITEMS.filter((i) => !MOBILE_PRIMARY_HREFS.has(i.href));
+// Derive age band string from session user's lifeStage.
+function getAgeBand(lifeStage?: string): "child" | "teen" | "adult" {
+  if (!lifeStage) return "adult";
+  if (lifeStage.startsWith("CHILD_")) return "child";
+  if (lifeStage.startsWith("TEEN_")) return "teen";
+  return "adult";
+}
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+
+  // Age-band derived from the logged-in user's own lifeStage.
+  const ageBand = getAgeBand((session?.user as any)?.lifeStage);
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter((i) => i.bands.includes(ageBand));
+
+  // Admin check: isStaff is synced to DB by the server layout on every load.
+  // After first load it will always be true for admin emails.
+  const isAdmin = (session?.user as any)?.isStaff === true;
+
+  // Mobile bottom nav — primary 4 tabs depend on age band.
+  const MOBILE_PRIMARY_HREFS = ageBand === "child"
+    ? new Set(["/dashboard", "/dashboard/body-safety", "/dashboard/meals", "/dashboard/learn"])
+    : ageBand === "teen"
+    ? new Set(["/dashboard", "/dashboard/cycle", "/dashboard/meals", "/dashboard/learn"])
+    : new Set(["/dashboard", "/dashboard/cycle", "/dashboard/chat", "/dashboard/meals"]);
+  const MOBILE_PRIMARY = NAV_ITEMS.filter((i) => MOBILE_PRIMARY_HREFS.has(i.href));
+  const MOBILE_SECONDARY = NAV_ITEMS.filter((i) => !MOBILE_PRIMARY_HREFS.has(i.href));
 
   // Close the More sheet whenever we navigate (a tap inside the sheet
   // changes pathname, so this also handles "tap, close, navigate").
@@ -138,6 +156,20 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               and assistive tech announce them. Visible labels on md+ desktop
               so power users see "Profile" vs guessing the avatar. */}
           <div className="flex items-center space-x-2 md:space-x-3">
+            {/* Admin-only shortcut — visible only to emails in ADMIN_EMAILS */}
+            {isAdmin && (
+              <Link
+                href="/dashboard/admin"
+                aria-label="Content Studio"
+                title="Content Studio (Staff)"
+                className={cn(
+                  "min-w-11 min-h-11 p-2.5 rounded-full hover:bg-muted flex items-center justify-center transition-colors",
+                  pathname === "/dashboard/admin" ? "text-primary bg-primary/10" : "text-muted-foreground",
+                )}
+              >
+                <ShieldCheck className="w-5 h-5" />
+              </Link>
+            )}
             <button
               type="button"
               aria-label="Notifications"

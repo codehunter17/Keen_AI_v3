@@ -5,12 +5,16 @@ import { redirect } from "next/navigation";
 import { getRecommendedContent } from "@/lib/actions/content";
 import { pickDaily, DAILY_FACTS } from "@/lib/daily";
 import { CONDITIONS } from "@/lib/conditions";
+import { UserContentSubmit } from "./user-content-submit";
 
 export const metadata = { title: "Learn · NutriMama" };
 
 export default async function LearnPage() {
   const s = await auth.api.getSession({ headers: await headers() });
   if (!s) redirect("/auth/sign-in");
+
+  const lifeStage = (s.user as any).lifeStage as string | undefined;
+  const isChild = lifeStage?.startsWith("CHILD_");
 
   const items = await getRecommendedContent({ limit: 24 });
   // Today's "did you know" — rotates daily.
@@ -42,10 +46,9 @@ export default async function LearnPage() {
         </p>
       </div>
 
-      {/* Health Library — NutriMama's 30 curated condition guides.
-          Pulled from lib/conditions.ts so we always have rich, scannable
-          content regardless of whether external articles are seeded. */}
-      <section className="mb-8 space-y-3">
+      {/* Health Library — adult/teen only. Children shouldn't see
+          period / PCOS / pregnancy conditions. */}
+      {!isChild && <section className="mb-8 space-y-3">
         <div className="flex items-baseline justify-between">
           <h2 className="font-heading text-xl text-foreground">Health library</h2>
           <Link
@@ -85,7 +88,7 @@ export default async function LearnPage() {
             </Link>
           ))}
         </div>
-      </section>
+      </section>}
 
       <header className="mb-3">
         <h2 className="font-heading text-xl text-foreground">
@@ -97,9 +100,12 @@ export default async function LearnPage() {
       </header>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl bg-card lift p-8 text-center">
+        <div className="rounded-2xl bg-card lift p-8 text-center space-y-3">
+          <p className="text-2xl">📖</p>
+          <p className="font-heading text-lg text-foreground">Articles coming soon</p>
           <p className="text-sm text-muted-foreground">
-            We&apos;re curating content for your stage. Check back soon.
+            We&apos;re curating content for your stage.{" "}
+            <Link href="/dashboard/admin" className="text-primary underline">Staff: seed articles →</Link>
           </p>
         </div>
       ) : (
@@ -146,6 +152,11 @@ export default async function LearnPage() {
           ))}
         </div>
       )}
+
+      {/* User content submission */}
+      <div className="mt-10">
+        <UserContentSubmit />
+      </div>
     </main>
   );
 }

@@ -5,9 +5,28 @@
 // listed in `source` field. Replace these with real article bodies + videos
 // before launch.
 
+import { config as loadEnv } from "dotenv";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+loadEnv({ path: ".env" });
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("Missing DATABASE_URL in environment");
+}
+
+const pool = new Pool({
+  connectionString,
+  max: 5,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 8_000,
+  keepAlive: true,
+  allowExitOnIdle: true,
+});
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const CONTENT = [
   // ── Personal safety / "good touch, bad touch" — ages 4-10 ────
@@ -206,4 +225,7 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });

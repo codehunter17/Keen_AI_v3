@@ -15,6 +15,17 @@ type NameLike =
   | undefined
   | { name?: string | null | undefined };
 
+/**
+ * Capitalise every word of a name string.
+ * "krishna kumar" → "Krishna Kumar"
+ * "PRIYA" → "Priya"
+ */
+function toTitleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+}
+
 function pickName(input: NameLike): string {
   if (!input) return "";
   const raw = typeof input === "string" ? input : (input.name ?? "");
@@ -26,7 +37,8 @@ function pickName(input: NameLike): string {
   if (looksLikePhoneNumber(trimmed)) return "";
   // Also reject email-shaped strings (some auth flows populate name=email).
   if (trimmed.includes("@") && /\.[a-z]{2,}/i.test(trimmed)) return "";
-  return trimmed;
+  // Always return in title-case so "krishna" → "Krishna" everywhere in the app.
+  return toTitleCase(trimmed);
 }
 
 function looksLikePhoneNumber(s: string): boolean {

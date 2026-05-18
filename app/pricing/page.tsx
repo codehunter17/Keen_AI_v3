@@ -10,18 +10,21 @@ import { safeContactEmail } from "@/lib/display-email";
 export const metadata = { title: "Plans · NutriMama" };
 
 const FEATURES: { label: string; tiers: ("FREE" | "CARE_49" | "PRO_99")[] }[] = [
-  { label: "Cycle tracking & calendar", tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "Age-personalised health dashboard",   tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "Cycle tracking & calendar",           tiers: ["FREE", "CARE_49", "PRO_99"] },
   { label: "Daily wellness log (sleep, mood, water)", tiers: ["FREE", "CARE_49", "PRO_99"] },
-  { label: "Curated content library", tiers: ["FREE", "CARE_49", "PRO_99"] },
-  { label: "AI chat companion", tiers: ["FREE", "CARE_49", "PRO_99"] },
-  { label: "Medical report analysis", tiers: ["CARE_49", "PRO_99"] },
-  { label: "Personalized meal plans", tiers: ["CARE_49", "PRO_99"] },
-  { label: "PCOS screening + insights", tiers: ["CARE_49", "PRO_99"] },
-  { label: "Pregnancy risk prediction (ML)", tiers: ["CARE_49", "PRO_99"] },
-  { label: "PDF export of your reports", tiers: ["CARE_49", "PRO_99"] },
-  { label: "Unlimited reports & meal plans", tiers: ["PRO_99"] },
-  { label: "Partner / family access", tiers: ["PRO_99"] },
-  { label: "Priority support", tiers: ["PRO_99"] },
+  { label: "Curated content library",             tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "Nutrition tracking (ICMR-NIN targets)", tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "AI chat companion (5 chats/day)",     tiers: ["FREE", "CARE_49", "PRO_99"] },
+  { label: "AI chat (10 chats/day)",              tiers: ["CARE_49", "PRO_99"] },
+  { label: "Medical report analysis",             tiers: ["CARE_49", "PRO_99"] },
+  { label: "Personalised meal plans",             tiers: ["CARE_49", "PRO_99"] },
+  { label: "PCOS screening + insights",           tiers: ["CARE_49", "PRO_99"] },
+  { label: "Pregnancy risk prediction (ML)",      tiers: ["CARE_49", "PRO_99"] },
+  { label: "PDF export of your reports",          tiers: ["CARE_49", "PRO_99"] },
+  { label: "Unlimited AI chats (15/day)",         tiers: ["PRO_99"] },
+  { label: "Unlimited reports & meal plans",      tiers: ["PRO_99"] },
+  { label: "Priority support",                    tiers: ["PRO_99"] },
 ];
 
 export default async function PricingPage() {

@@ -59,6 +59,17 @@ export const auth = betterAuth({
         type: "date",
         required: false,
       },
+      // Life stage — surfaced to client for age-gated nav and dashboard views.
+      lifeStage: {
+        type: "string",
+        required: false,
+      },
+      // Staff flag — surfaced to client so nav can show Admin link.
+      // The actual admin routes are protected server-side too (double gate).
+      isStaff: {
+        type: "boolean",
+        required: false,
+      },
     },
   },
   emailAndPassword: {

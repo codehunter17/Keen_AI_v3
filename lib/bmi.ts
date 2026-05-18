@@ -29,7 +29,8 @@ export interface BmiResult {
 }
 
 export function calcBmi(heightCm: number, weightKg: number): BmiResult {
-  if (!heightCm || !weightKg || heightCm < 80 || weightKg < 25) {
+  // Minimum: height 80 cm (tall 4-yr-old), weight 12 kg (small child).
+  if (!heightCm || !weightKg || heightCm < 80 || weightKg < 12) {
     throw new Error("Invalid height or weight");
   }
   const m = heightCm / 100;
