@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { ageFromDob, ageBandFromAge } from "@/lib/lifecycle";
+import { createParentalConsentOrder, refundPayment, verifyPaymentSignature } from "@/lib/razorpay";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 
@@ -18,12 +19,131 @@ async function requireSession() {
   return session;
 }
 
+const consentFlowSchema = z.object({
+  firstName: z.string().trim().min(1).max(50),
+  dob: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
+  relationship: z.enum(["DAUGHTER", "NIECE", "SISTER", "OTHER"]),
+});
+
+export async function startConsentFlow(
+  input: z.infer<typeof consentFlowSchema>,
+) {
+  const session = await requireSession();
+  const data = consentFlowSchema.parse(input);
+
+  if (!process.env.RAZORPAY_KEY_ID) {
+    return {
+      ok: false as const,
+      reason: "RAZORPAY_NOT_CONFIGURED",
+      message:
+        "Payments are not configured. Please contact support or try again later.",
+    };
+  }
+
+  try {
+    const order = await createParentalConsentOrder({
+      parentUserId: session.user.id,
+      dependentName: data.firstName,
+    });
+
+    return {
+      ok: true as const,
+      razorpayOrderId: order.id,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+      amountInPaise: order.amount,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[dependent] startConsentFlow failed:", msg);
+    return {
+      ok: false as const,
+      reason: "RAZORPAY_ERROR",
+      message:
+        "We couldn't start the payment flow. Please try again in a moment.",
+    };
+  }
+}
+
+const confirmConsentSchema = z.object({
+  razorpayOrderId: z.string(),
+  razorpayPaymentId: z.string(),
+  razorpaySignature: z.string(),
+  firstName: z.string().trim().min(1).max(50),
+  dob: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
+  relationship: z.enum(["DAUGHTER", "NIECE", "SISTER", "OTHER"]),
+});
+
+export async function confirmConsent(
+  input: z.infer<typeof confirmConsentSchema>,
+) {
+  const session = await requireSession();
+  const data = confirmConsentSchema.parse(input);
+
+  const valid = verifyPaymentSignature({
+    orderId: data.razorpayOrderId,
+    paymentId: data.razorpayPaymentId,
+    signature: data.razorpaySignature,
+  });
+  if (!valid) {
+    return { ok: false as const, reason: "BAD_SIGNATURE", message: "Payment verification failed." };
+  }
+
+  try {
+    await refundPayment(data.razorpayPaymentId);
+  } catch (err) {
+    console.error("[dependent] refund failed:", err);
+    return {
+      ok: false as const,
+      reason: "REFUND_FAILED",
+      message: "We were unable to refund the ₹1 payment. Please contact support.",
+    };
+  }
+
+  const dob = new Date(data.dob);
+  const age = ageFromDob(dob);
+  const ageBand = ageBandFromAge(age);
+  const h = await headers();
+
+  const dependent = await prisma.$transaction(async (tx) => {
+    const dep = await tx.dependentProfile.create({
+      data: {
+        parentId: session.user.id,
+        firstName: data.firstName,
+        dob,
+        relationship: data.relationship,
+        ageBand,
+        hasMenarche: false,
+        cycleTrackingEnabled: false,
+      },
+    });
+
+    await tx.consentRecord.create({
+      data: {
+        userId: session.user.id,
+        dependentId: dep.id,
+        consentType: "PARENTAL_VERIFY",
+        granted: true,
+        method: "RAZORPAY_RE1",
+        evidenceRef: data.razorpayPaymentId,
+        ipAddress: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        userAgent: h.get("user-agent") ?? null,
+        policyVersion: "parental-consent-2026-05-17",
+      },
+    });
+
+    return dep;
+  });
+
+  revalidatePath("/dashboard/family");
+  return { ok: true as const, dependentId: dependent.id };
+}
+
 const createDependentSchema = z.object({
   firstName: z.string().trim().min(1).max(50),
   dob: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
   relationship: z.enum(["DAUGHTER", "NIECE", "SISTER", "OTHER"]),
-  parentalConsentGiven: z.literal(true, {
-    errorMap: () => ({ message: "Parental consent is required" }),
+  parentalConsentGiven: z.boolean().refine((v) => v === true, {
+    message: "Parental consent is required",
   }),
 });
 

@@ -87,6 +87,9 @@ export function AddDependentClient({
             razorpayOrderId: resp.razorpay_order_id,
             razorpayPaymentId: resp.razorpay_payment_id,
             razorpaySignature: resp.razorpay_signature,
+            firstName,
+            dob,
+            relationship,
           });
           if (c.ok) {
             router.push(`/dashboard/dependents/${c.dependentId}`);

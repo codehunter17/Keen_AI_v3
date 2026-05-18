@@ -21,7 +21,6 @@ import {
   MoreHorizontal,
   X,
   ShieldCheck,
-  ShieldHeart,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TierBadge } from "@/components/tier-badge";
@@ -33,7 +32,7 @@ import { Loader } from "@/components/ui/loader";
 // All possible nav items — filtered per age band at render time.
 const ALL_NAV_ITEMS = [
   { label: "Overview",    href: "/dashboard",            icon: LayoutDashboard, bands: ["child","teen","adult"] },
-  { label: "Body Safety", href: "/dashboard/body-safety",icon: ShieldHeart,     bands: ["child"] },
+  { label: "Body Safety", href: "/dashboard/body-safety",icon: ShieldCheck,     bands: ["child"] },
   { label: "Cycle",       href: "/dashboard/cycle",      icon: Heart,           bands: ["teen","adult"] },
   { label: "Pregnancy",   href: "/dashboard/pregnancy",  icon: Heart,           bands: ["adult"] },
   { label: "Wellness",    href: "/dashboard/wellness",   icon: Droplets,        bands: ["teen","adult"] },

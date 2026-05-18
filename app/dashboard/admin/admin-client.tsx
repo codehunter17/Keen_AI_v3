@@ -10,7 +10,7 @@ import {
   type ContentInput,
 } from "@/lib/actions/admin-content";
 import {
-  Plus, Edit3, Trash2, Eye, EyeOff, Youtube, Instagram,
+  Plus, Edit3, Trash2, Eye, EyeOff, Play, Link2,
   FileText, Video, Users, ShieldCheck, Globe, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -133,7 +133,7 @@ export function AdminClient() {
               {/* Icon */}
               <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
                 {item.videoUrl ? <Video className="w-5 h-5 text-primary" /> :
-                 item.instagramUrl ? <Instagram className="w-5 h-5 text-primary" /> :
+                 item.instagramUrl ? <Link2 className="w-5 h-5 text-primary" /> :
                  <FileText className="w-5 h-5 text-primary" />}
               </div>
               {/* Info */}
@@ -155,8 +155,8 @@ export function AdminClient() {
                     <span key={t} className="text-[9px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5">{t}</span>
                   ))}
                   <span className="text-[9px] text-muted-foreground">{item._count.views} views · {item.language.toUpperCase()}</span>
-                  {item.videoUrl && <Youtube className="w-3.5 h-3.5 text-red-500" />}
-                  {item.instagramUrl && <Instagram className="w-3.5 h-3.5 text-pink-500" />}
+                  {item.videoUrl && <Play className="w-3.5 h-3.5 text-red-500" />}
+                  {item.instagramUrl && <Link2 className="w-3.5 h-3.5 text-pink-500" />}
                 </div>
               </div>
               {/* Actions */}
