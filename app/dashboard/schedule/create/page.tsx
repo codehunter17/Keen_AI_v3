@@ -49,23 +49,23 @@ export default function CreateEventPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card border border-border shadow-2xl rounded-[3rem] p-8 md:p-12"
+        className="bg-card border border-border shadow-2xl rounded-3xl md:rounded-[3rem] p-5 md:p-12"
       >
-        <div className="flex items-center space-x-4 mb-10">
-          <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center">
-            <Calendar className="w-8 h-8 text-primary" />
+        <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10 min-w-0">
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-[1.5rem] bg-primary/10 flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6 md:w-8 md:h-8 text-primary" />
           </div>
-          <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-3xl font-heading font-bold text-foreground break-words">
               Add Journey Mile
             </h1>
-            <p className="text-muted-foreground font-medium">
+            <p className="text-sm md:text-base text-muted-foreground font-medium">
               Mark a new milestone in your pregnancy.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">
               What&apos;s the occasion?
@@ -75,7 +75,7 @@ export default function CreateEventPage() {
                 required
                 type="text"
                 placeholder="e.g., Biweekly Check-up, Yoga Session"
-                className="w-full bg-muted/30 border border-border rounded-2xl p-5 pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all text-lg font-medium"
+                className="w-full bg-muted/30 border border-border rounded-2xl p-4 md:p-5 pl-12 md:pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all text-base md:text-lg font-medium"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
@@ -83,7 +83,7 @@ export default function CreateEventPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">
                 Date
@@ -92,7 +92,7 @@ export default function CreateEventPage() {
                 <input
                   required
                   type="date"
-                  className="w-full bg-muted/30 border border-border rounded-2xl p-5 pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                  className="w-full bg-muted/30 border border-border rounded-2xl p-4 md:p-5 pl-12 md:pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
@@ -109,7 +109,7 @@ export default function CreateEventPage() {
                   required
                   type="text"
                   placeholder="e.g., 10:30 AM"
-                  className="w-full bg-muted/30 border border-border rounded-2xl p-5 pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                  className="w-full bg-muted/30 border border-border rounded-2xl p-4 md:p-5 pl-12 md:pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 />
@@ -126,7 +126,7 @@ export default function CreateEventPage() {
               <input
                 type="text"
                 placeholder="e.g., City Medical Wing, Virtual"
-                className="w-full bg-muted/30 border border-border rounded-2xl p-5 pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+                className="w-full bg-muted/30 border border-border rounded-2xl p-4 md:p-5 pl-12 md:pl-14 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               />
@@ -139,7 +139,7 @@ export default function CreateEventPage() {
             whileTap={{ scale: 0.98 }}
             disabled={isSubmitting}
             type="submit"
-            className="w-full bg-primary text-white py-6 rounded-3xl font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-primary text-white py-5 md:py-6 rounded-3xl font-bold text-base md:text-lg shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <Loader2 className="w-6 h-6 animate-spin" />

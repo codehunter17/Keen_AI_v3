@@ -162,11 +162,12 @@ export function SettingsClient({
       {/* dev-only provider status (hidden from end users) */}
       {providersSlot}
 
-      {/* ── Profile card (coral gradient) ─────────────────────── */}
-      <section className="rounded-3xl p-6 bg-gradient-to-br from-rose-500 to-rose-700 text-white relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/15 blur-2xl" />
+      {/* ── Profile card (warm coral gradient) ─────────────────── */}
+      <section className="rounded-3xl p-6 bg-gradient-to-br from-pink-400 via-rose-400 to-orange-300 text-white relative overflow-hidden shadow-lg shadow-rose-200/40 dark:shadow-rose-900/20">
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/20 blur-2xl" />
+        <div className="absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-orange-200/20 blur-2xl" />
         <div className="relative flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center text-2xl font-heading">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl font-heading ring-1 ring-white/30">
             {displayInitial(user)}
           </div>
           <div className="flex-1 min-w-0">
@@ -201,7 +202,7 @@ export function SettingsClient({
             className={
               "py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 " +
               (!isPregnant
-                ? "bg-rose-500 text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground")
             }
           >
@@ -219,7 +220,7 @@ export function SettingsClient({
             className={
               "py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 " +
               (isPregnant
-                ? "bg-rose-500 text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground")
             }
           >
@@ -276,7 +277,7 @@ export function SettingsClient({
         {/* Reminders → schedule page */}
         <Link href="/dashboard/schedule" className="block">
           <Row
-            icon={<Bell className="w-4 h-4 text-rose-500" />}
+            icon={<Bell className="w-4 h-4 text-primary" />}
             label="Reminders"
             right={<ChevronRight className="w-4 h-4 text-muted-foreground" />}
           />
@@ -345,8 +346,8 @@ export function SettingsClient({
       </Link>
 
       {/* ── Delete account (minimised at the bottom, DPDP required) ─ */}
-      <section className="rounded-3xl border border-destructive/30 bg-destructive/5 p-5">
-        <p className="text-[10px] uppercase tracking-widest font-semibold text-destructive">
+      <section className="rounded-3xl border border-border bg-muted/30 p-5">
+        <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">
           Danger zone
         </p>
         {!deleteOpen ? (
@@ -419,7 +420,7 @@ export function SettingsClient({
               >
                 <Minus className="w-5 h-5" />
               </button>
-              <p className="font-heading text-5xl text-emerald-600 tabular-nums w-24 text-center">
+              <p className="font-heading text-5xl text-primary tabular-nums w-24 text-center">
                 {weeksInModal}
               </p>
               <button
@@ -443,7 +444,7 @@ export function SettingsClient({
                 type="button"
                 onClick={startPregnancy}
                 disabled={pending}
-                className="rounded-2xl bg-rose-500 hover:bg-rose-600 text-white py-3 text-sm font-semibold disabled:opacity-60"
+                className="rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-sm font-semibold disabled:opacity-60"
               >
                 {pending ? "Starting…" : "Confirm"}
               </button>

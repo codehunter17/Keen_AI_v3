@@ -46,29 +46,29 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
+    <div className="max-w-4xl mx-auto space-y-6 md:space-y-10 pb-20 px-4 md:px-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+        <div className="space-y-1 min-w-0">
           <Link
             href="/dashboard"
-            className="flex items-center text-primary/60 hover:text-primary mb-4 transition-colors group"
+            className="flex items-center text-primary/60 hover:text-primary mb-3 md:mb-4 transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             <span className="font-bold text-[10px] uppercase tracking-widest">
               Dashboard
             </span>
           </Link>
-          <h1 className="text-4xl font-heading font-bold text-foreground tracking-tight">
+          <h1 className="text-2xl md:text-4xl font-heading font-bold text-foreground tracking-tight break-words">
             Your Full Journey Schedule
           </h1>
-          <p className="text-muted-foreground font-medium">
+          <p className="text-sm md:text-base text-muted-foreground font-medium">
             Keep track of all your appointments and milestones.
           </p>
         </div>
 
         <Link
           href="/dashboard/schedule/create"
-          className="bg-primary text-white px-8 py-4 rounded-2xl font-bold flex items-center space-x-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm"
+          className="bg-primary text-white px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm w-full md:w-auto"
         >
           <Plus className="w-5 h-5" />
           <span>Add New Event</span>
@@ -83,32 +83,32 @@ export default function SchedulePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               key={event.id}
-              className="bg-card p-8 rounded-[2.5rem] border border-border flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm hover:border-primary/30 transition-colors group"
+              className="bg-card p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] border border-border flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 shadow-sm hover:border-primary/30 transition-colors group"
             >
-              <div className="flex items-center space-x-8">
-                <div className="text-center w-[80px] border-r border-border pr-8 flex flex-col justify-center">
+              <div className="flex items-center gap-4 md:gap-8 min-w-0">
+                <div className="text-center w-[60px] md:w-[80px] border-r border-border pr-4 md:pr-8 flex flex-col justify-center shrink-0">
                   <p className="text-[10px] font-bold tracking-widest text-primary uppercase">
                     {new Date(event.date).toLocaleDateString("en-US", {
                       month: "short",
                     })}
                   </p>
-                  <p className="text-3xl font-bold text-foreground leading-none mt-1">
+                  <p className="text-2xl md:text-3xl font-bold text-foreground leading-none mt-1">
                     {new Date(event.date).getDate()}
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <h4 className="font-heading font-bold text-xl text-foreground">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <h4 className="font-heading font-bold text-base md:text-xl text-foreground break-words">
                     {event.title}
                   </h4>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground font-medium">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs md:text-sm text-muted-foreground font-medium">
                     <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1.5 opacity-60" />
-                      {event.timeString}
+                      <Clock className="w-4 h-4 mr-1.5 opacity-60 shrink-0" />
+                      <span className="break-words">{event.timeString}</span>
                     </div>
                     {event.location && (
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-1.5 opacity-60" />
-                        {event.location}
+                      <div className="flex items-center min-w-0">
+                        <MapPin className="w-4 h-4 mr-1.5 opacity-60 shrink-0" />
+                        <span className="break-words">{event.location}</span>
                       </div>
                     )}
                   </div>
@@ -116,19 +116,20 @@ export default function SchedulePage() {
               </div>
               <button
                 onClick={() => handleDelete(event.id)}
-                className="w-full md:w-auto bg-red-500/5 text-red-500/40 hover:bg-red-500 hover:text-white px-6 py-4 rounded-2xl transition-all flex items-center justify-center"
+                aria-label="Delete event"
+                className="w-full md:w-auto bg-red-500/5 text-red-500/60 md:text-red-500/40 hover:bg-red-500 hover:text-white px-6 py-3 md:py-4 rounded-2xl transition-all flex items-center justify-center"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
             </motion.div>
           ))
         ) : (
-          <div className="text-center py-20 bg-muted/20 rounded-[3rem] border border-dashed border-border">
-            <Calendar className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-muted-foreground">
+          <div className="text-center py-12 md:py-20 px-6 bg-muted/20 rounded-3xl md:rounded-[3rem] border border-dashed border-border">
+            <Calendar className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground/30 mx-auto mb-4" />
+            <h3 className="text-lg md:text-xl font-bold text-muted-foreground">
               No events scheduled yet
             </h3>
-            <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
+            <p className="text-sm md:text-base text-muted-foreground mt-2 max-w-sm mx-auto">
               Start tracking your pregnancy journey by adding your first
               milestone.
             </p>
