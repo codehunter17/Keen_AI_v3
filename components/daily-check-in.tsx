@@ -53,15 +53,20 @@ export function DailyCheckIn() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [mood, setMood] = useState<string | null>(null);
 
-  // Auto-open once per UTC day, 2s after mount, only if not already done today.
+  // Auto-open once per UTC day, 2s after mount, only if not already done
+  // or dismissed today. Dismissal is persisted so the modal does NOT pop
+  // back on every page navigation.
   useEffect(() => {
-    const last = localStorage.getItem("nm_checkin_date");
-    if (last === todayKey()) return;
+    const today = todayKey();
+    const lastDone = localStorage.getItem("nm_checkin_date");
+    const lastDismissed = localStorage.getItem("nm_checkin_dismissed");
+    if (lastDone === today || lastDismissed === today) return;
     const t = setTimeout(() => setIsOpen(true), 2000);
     return () => clearTimeout(t);
   }, []);
 
   const close = () => {
+    localStorage.setItem("nm_checkin_dismissed", todayKey());
     setIsOpen(false);
   };
 
