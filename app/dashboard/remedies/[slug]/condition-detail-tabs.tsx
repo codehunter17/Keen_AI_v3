@@ -37,9 +37,9 @@ export function ConditionDetailTabs({
       <div
         role="tablist"
         aria-label="Condition information"
-        className="-mx-1 overflow-x-auto no-scrollbar sticky top-20 z-10 bg-background/95 backdrop-blur-md py-2"
+        className="-mx-4 sm:-mx-1 overflow-x-auto no-scrollbar sticky top-0 sm:top-20 z-10 bg-background/95 backdrop-blur-md py-2"
       >
-        <div className="flex gap-2 px-1 min-w-min">
+        <div className="flex gap-2 px-4 sm:px-1 min-w-min">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -50,7 +50,7 @@ export function ConditionDetailTabs({
               type="button"
               onClick={() => setActive(t.id)}
               className={cn(
-                "shrink-0 h-10 px-4 rounded-full text-sm font-semibold border transition-all flex items-center gap-1.5",
+                "shrink-0 h-9 sm:h-10 px-3.5 sm:px-4 rounded-full text-xs sm:text-sm font-semibold border transition-all flex items-center gap-1.5",
                 active === t.id
                   ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-card text-foreground border-border hover:border-primary/40",

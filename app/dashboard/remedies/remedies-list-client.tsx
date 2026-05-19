@@ -98,31 +98,32 @@ export function RemediesListClient({ items, categories }: Props) {
             <Link
               key={c.id}
               href={`/dashboard/remedies/${c.slug}`}
-              className="group rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-primary/30 transition-all p-4 shadow-sm flex gap-3 active:scale-[0.99]"
+              className="group rounded-2xl border border-border bg-card hover:bg-card/80 hover:border-primary/30 transition-all p-3.5 sm:p-4 shadow-sm flex gap-3 active:scale-[0.99]"
             >
               <div
-                className="text-3xl shrink-0 leading-none mt-0.5"
+                className="text-2xl sm:text-3xl shrink-0 leading-none mt-0.5"
                 aria-hidden
               >
                 {c.emoji}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-heading text-base font-bold text-foreground leading-tight truncate">
+                  <h3 className="font-heading text-sm sm:text-base font-bold text-foreground leading-tight break-words min-w-0 flex-1">
                     {c.name}
                   </h3>
                   {c.hasRed && (
                     <span
-                      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide rounded-full px-1.5 sm:px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
                       title="Has emergency red-flag signs"
+                      aria-label="Has red-flag signs"
                     >
                       <AlertTriangle className="w-3 h-3" />
-                      Red flags
+                      <span className="hidden sm:inline">Red flags</span>
                     </span>
                   )}
                 </div>
                 {c.nameHi && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  <p className="text-xs text-muted-foreground mt-0.5 break-words">
                     {c.nameHi}
                   </p>
                 )}
