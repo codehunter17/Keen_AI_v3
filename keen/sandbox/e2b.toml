@@ -1,0 +1,6 @@
+team_id = ""
+dockerfile = "e2b.Dockerfile"
+template_name = "keen-ml-foundry"
+cpu_count = 2
+memory_mb = 2048
+start_cmd = ""

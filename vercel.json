@@ -1,0 +1,14 @@
+{
+  "crons": [
+    { "path": "/api/keen/cron/observe",         "schedule": "30 18 * * *" },
+    { "path": "/api/keen/cron/synthesize",      "schedule": "30 19 * * 0" },
+    { "path": "/api/keen/cron/propose",         "schedule": "0 20 * * 0"  },
+    { "path": "/api/keen/cron/distribute",      "schedule": "30 20 * * 0" },
+    { "path": "/api/keen/cron/telemetry-drain", "schedule": "*/5 * * * *" },
+    { "path": "/api/keen/cron/optimize",        "schedule": "0 4 * * *"   },
+    { "path": "/api/keen/cron/media-dispatch",  "schedule": "0 */2 * * *" },
+    { "path": "/api/keen/cron/scholar-harvest", "schedule": "15 3 * * *"  },
+    { "path": "/api/keen/cron/scholar-conflict","schedule": "30 5 * * 0"  },
+    { "path": "/api/keen/cron/scholar-prune",   "schedule": "45 5 * * *"  }
+  ]
+}
