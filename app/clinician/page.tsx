@@ -10,15 +10,18 @@ export default async function ClinicianHome() {
   if (!clinician) return null; // layout already 404s
 
   const [total, last30Days, recent] = await Promise.all([
-    prisma.keenClinicalCase.count({ where: { teacherId: clinician.teacherId } }),
+    prisma.keenClinicalCase.count({
+      where: { teacherId: clinician.teacherId, withdrawnAt: null },
+    }),
     prisma.keenClinicalCase.count({
       where: {
         teacherId: clinician.teacherId,
+        withdrawnAt: null,
         occurredAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
       },
     }),
     prisma.keenClinicalCase.findMany({
-      where: { teacherId: clinician.teacherId },
+      where: { teacherId: clinician.teacherId, withdrawnAt: null },
       orderBy: { occurredAt: "desc" },
       take: 5,
     }),

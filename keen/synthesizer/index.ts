@@ -53,7 +53,7 @@ export async function synthesize(): Promise<SynthesizeResult> {
       take: 50,
     }),
     prisma.keenClinicalCase.findMany({
-      where: { occurredAt: { gte: since } },
+      where: { occurredAt: { gte: since }, withdrawnAt: null },
       orderBy: { occurredAt: "desc" },
       take: 25,
       include: {

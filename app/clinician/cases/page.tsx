@@ -19,7 +19,7 @@ export default async function ClinicianCasesPage() {
   if (!clinician) return null;
 
   const cases = await prisma.keenClinicalCase.findMany({
-    where: { teacherId: clinician.teacherId },
+    where: { teacherId: clinician.teacherId, withdrawnAt: null },
     orderBy: { occurredAt: "desc" },
     take: 100,
     include: { outcomes: { orderBy: { checkpointAt: "asc" } } },

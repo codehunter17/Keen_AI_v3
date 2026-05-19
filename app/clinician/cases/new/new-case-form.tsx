@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClinicianCaseAction } from "./actions";
 
@@ -17,10 +17,16 @@ export function NewCaseForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Synchronous guard — React state updates are async, so a rapid double-click
+  // can fire two submissions before `pending` becomes true on re-render.
+  // The ref blocks that path immediately.
+  const submittingRef = useRef(false);
 
   return (
     <form
       action={async (fd) => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setError(null);
         setPending(true);
         try {
@@ -28,13 +34,17 @@ export function NewCaseForm() {
           if (!res.ok) {
             setError(res.error);
             setPending(false);
+            submittingRef.current = false;
             return;
           }
+          // Successful save — keep pending=true so the button stays disabled
+          // until the navigation completes. Do NOT reset submittingRef here.
           router.push("/clinician/cases");
           router.refresh();
         } catch (err) {
           setError(err instanceof Error ? err.message : "save failed");
           setPending(false);
+          submittingRef.current = false;
         }
       }}
       className="space-y-6"

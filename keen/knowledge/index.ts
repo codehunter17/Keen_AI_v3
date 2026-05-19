@@ -49,6 +49,7 @@ export async function recall(query: RecallQuery): Promise<RecallResult> {
 
   const caseRows = await prisma.keenClinicalCase.findMany({
     where: {
+      withdrawnAt: null,
       OR: [
         { reasoning: { contains: query.q, mode: "insensitive" } },
       ],

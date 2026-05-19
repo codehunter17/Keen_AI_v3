@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getClinician } from "@/lib/clinician-auth";
+import { DeleteButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -71,8 +72,32 @@ export default async function ClinicianCaseDetailPage({
           >
             + Outcome
           </Link>
+          {!c.withdrawnAt && (
+            <DeleteButton
+              caseId={c.id}
+              inEditWindow={editWindow.open}
+              hasOutcomes={c.outcomes.length > 0}
+            />
+          )}
         </div>
       </div>
+
+      {c.withdrawnAt && (
+        <div className="border border-rose-500/40 rounded-2xl p-4 bg-rose-500/5 text-sm">
+          <div className="font-semibold text-rose-700 dark:text-rose-300">
+            Withdrawn on {c.withdrawnAt.toISOString().slice(0, 10)}
+          </div>
+          {c.withdrawnReason && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Reason: {c.withdrawnReason}
+            </p>
+          )}
+          <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-widest">
+            This case is excluded from NutriMama&apos;s reasoning. Contact the
+            team if you need it restored.
+          </p>
+        </div>
+      )}
 
       <div
         className={`text-xs font-mono rounded-xl px-3 py-2 ${

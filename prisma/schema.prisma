@@ -666,19 +666,24 @@ model KeenTeacher {
 }
 
 model KeenClinicalCase {
-  id           String   @id @default(uuid())
-  teacherId    String
-  teacher      KeenTeacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  occurredAt   DateTime
-  inputs       Json
-  differential Json?
-  decision     Json
-  reasoning    String?  @db.Text
-  createdAt    DateTime @default(now())
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         KeenTeacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  occurredAt      DateTime
+  inputs          Json
+  differential    Json?
+  decision        Json
+  reasoning       String?  @db.Text
+  // Withdrawal — soft-delete that preserves audit trail. NULL = active.
+  withdrawnAt     DateTime?
+  withdrawnReason String?  @db.Text
+  withdrawnBy     String?  // "clinician" | "operator"
+  createdAt       DateTime @default(now())
 
-  outcomes     KeenOutcome[]
+  outcomes        KeenOutcome[]
 
   @@index([teacherId, occurredAt])
+  @@index([withdrawnAt])
   @@map("keen_clinical_case")
 }
 
