@@ -83,7 +83,7 @@ export async function uploadToYouTube(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": `multipart/related; boundary=${boundary}`,
       },
-      body,
+      body: body as unknown as BodyInit,
     });
 
     if (!res.ok) {
