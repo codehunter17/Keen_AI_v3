@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getClinician } from "@/lib/clinician-auth";
 import { OutcomeForm } from "./outcome-form";
@@ -16,9 +16,16 @@ export default async function ClinicianOutcomePage({
   const { id } = await params;
   const c = await prisma.keenClinicalCase.findUnique({
     where: { id },
-    select: { id: true, teacherId: true, occurredAt: true, decision: true },
+    select: {
+      id: true,
+      teacherId: true,
+      occurredAt: true,
+      decision: true,
+      withdrawnAt: true,
+    },
   });
   if (!c || c.teacherId !== clinician.teacherId) notFound();
+  if (c.withdrawnAt) redirect(`/clinician/cases/${c.id}`);
 
   const decision = c.decision as { type?: string; details?: string };
 

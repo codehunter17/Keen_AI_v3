@@ -7,7 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function TeachersPage() {
   const teachers = await prisma.keenTeacher.findMany({
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { cases: true } } },
+    include: {
+      _count: {
+        select: { cases: { where: { withdrawnAt: null } } },
+      },
+    },
   });
 
   return (

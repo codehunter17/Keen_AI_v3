@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateClinicianCaseAction } from "./actions";
 
@@ -40,10 +40,13 @@ export function EditCaseForm({ defaults }: { defaults: Defaults }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   return (
     <form
       action={async (fd) => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setError(null);
         setPending(true);
         try {
@@ -51,6 +54,7 @@ export function EditCaseForm({ defaults }: { defaults: Defaults }) {
           if (!res.ok) {
             setError(res.error);
             setPending(false);
+            submittingRef.current = false;
             return;
           }
           router.push(`/clinician/cases/${defaults.caseId}`);
@@ -58,6 +62,7 @@ export function EditCaseForm({ defaults }: { defaults: Defaults }) {
         } catch (err) {
           setError(err instanceof Error ? err.message : "save failed");
           setPending(false);
+          submittingRef.current = false;
         }
       }}
       className="space-y-6"

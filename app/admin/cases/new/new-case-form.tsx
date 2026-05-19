@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCaseAction } from "./actions";
 
@@ -17,8 +17,9 @@ const DECISION_TYPES = [
 
 export function NewCaseForm({ teachers }: { teachers: Teacher[] }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   if (teachers.length === 0) {
     return (
@@ -34,17 +35,26 @@ export function NewCaseForm({ teachers }: { teachers: Teacher[] }) {
 
   return (
     <form
-      action={(fd) => {
+      action={async (fd) => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setError(null);
-        startTransition(async () => {
+        setPending(true);
+        try {
           const res = await createCaseAction(fd);
           if (!res.ok) {
             setError(res.error);
+            setPending(false);
+            submittingRef.current = false;
             return;
           }
           router.push("/admin/cases");
           router.refresh();
-        });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "save failed");
+          setPending(false);
+          submittingRef.current = false;
+        }
       }}
       className="space-y-6"
     >

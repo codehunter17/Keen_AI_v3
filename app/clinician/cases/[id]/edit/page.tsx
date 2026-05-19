@@ -18,6 +18,7 @@ export default async function ClinicianEditCasePage({
   const { id } = await params;
   const c = await prisma.keenClinicalCase.findUnique({ where: { id } });
   if (!c || c.teacherId !== clinician.teacherId) notFound();
+  if (c.withdrawnAt) redirect(`/clinician/cases/${c.id}`);
 
   const elapsed = Date.now() - c.createdAt.getTime();
   if (elapsed > EDIT_WINDOW_MS) {

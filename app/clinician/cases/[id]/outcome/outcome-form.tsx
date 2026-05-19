@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { logOutcomeAction } from "./actions";
 
@@ -31,6 +31,7 @@ export function OutcomeForm({
   const [checkpointAt, setCheckpointAt] = useState(
     new Date().toISOString().slice(0, 10),
   );
+  const submittingRef = useRef(false);
 
   const setPreset = (days: number) => {
     const d = new Date(caseOccurredAt);
@@ -41,6 +42,8 @@ export function OutcomeForm({
   return (
     <form
       action={async (fd) => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setError(null);
         setPending(true);
         try {
@@ -48,6 +51,7 @@ export function OutcomeForm({
           if (!res.ok) {
             setError(res.error);
             setPending(false);
+            submittingRef.current = false;
             return;
           }
           router.push(`/clinician/cases/${caseId}`);
@@ -55,6 +59,7 @@ export function OutcomeForm({
         } catch (err) {
           setError(err instanceof Error ? err.message : "save failed");
           setPending(false);
+          submittingRef.current = false;
         }
       }}
       className="space-y-6"

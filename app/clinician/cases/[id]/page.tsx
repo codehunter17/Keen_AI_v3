@@ -123,7 +123,13 @@ export default async function ClinicianCaseDetailPage({
             <div>symptoms: {inputs.symptoms.join(", ")}</div>
           )}
           {inputs.labs && Object.keys(inputs.labs).length > 0 && (
-            <div>labs: {JSON.stringify(inputs.labs)}</div>
+            <div>
+              labs:{" "}
+              {typeof inputs.labs.notes === "string" &&
+              Object.keys(inputs.labs).length === 1
+                ? inputs.labs.notes
+                : JSON.stringify(inputs.labs)}
+            </div>
           )}
           {inputs.history && (
             <div className="text-sm font-sans mt-2 whitespace-pre-wrap">

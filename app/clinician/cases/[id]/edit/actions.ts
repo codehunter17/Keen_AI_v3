@@ -24,11 +24,14 @@ export async function updateClinicianCaseAction(
 
   const existing = await prisma.keenClinicalCase.findUnique({
     where: { id: caseId },
-    select: { teacherId: true, createdAt: true },
+    select: { teacherId: true, createdAt: true, withdrawnAt: true },
   });
   if (!existing) return { ok: false, error: "case not found" };
   if (existing.teacherId !== clinician.teacherId) {
     return { ok: false, error: "not your case" };
+  }
+  if (existing.withdrawnAt) {
+    return { ok: false, error: "case is withdrawn and cannot be edited" };
   }
   const elapsed = Date.now() - existing.createdAt.getTime();
   if (elapsed > EDIT_WINDOW_MS) {

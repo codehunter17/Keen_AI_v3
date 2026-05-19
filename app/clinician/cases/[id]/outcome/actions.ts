@@ -20,11 +20,14 @@ export async function logOutcomeAction(
 
   const c = await prisma.keenClinicalCase.findUnique({
     where: { id: caseId },
-    select: { teacherId: true },
+    select: { teacherId: true, withdrawnAt: true },
   });
   if (!c) return { ok: false, error: "case not found" };
   if (c.teacherId !== clinician.teacherId) {
     return { ok: false, error: "not your case" };
+  }
+  if (c.withdrawnAt) {
+    return { ok: false, error: "case is withdrawn — cannot add outcomes" };
   }
 
   const checkpointRaw = String(fd.get("checkpointAt") ?? "");
