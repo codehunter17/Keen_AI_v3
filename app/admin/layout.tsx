@@ -14,6 +14,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { ReactNode } from "react";
+import { AdminNav } from "./admin-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </span>
         </div>
       </header>
+      <AdminNav />
       <main className="max-w-6xl mx-auto px-6 py-10">{children}</main>
     </div>
   );

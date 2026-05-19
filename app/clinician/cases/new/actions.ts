@@ -35,15 +35,19 @@ export async function createClinicianCaseAction(
     return { ok: false, error: "invalid date" };
   }
 
+  // Labs are optional. If parseable JSON, store as structured object; otherwise
+  // keep the raw text under a `notes` key so the clinician's intent isn't lost.
   let labs: Record<string, number | string> | undefined;
   if (labsRaw) {
     try {
       const parsed = JSON.parse(labsRaw) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         labs = parsed as Record<string, number | string>;
+      } else {
+        labs = { notes: labsRaw };
       }
     } catch {
-      return { ok: false, error: "labs JSON is malformed" };
+      labs = { notes: labsRaw };
     }
   }
 

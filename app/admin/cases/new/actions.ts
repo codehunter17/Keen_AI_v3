@@ -48,9 +48,11 @@ export async function createCaseAction(
       const parsed = JSON.parse(labsRaw) as unknown;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         labs = parsed as Record<string, number | string>;
+      } else {
+        labs = { notes: labsRaw };
       }
     } catch {
-      return { ok: false, error: "labs JSON is malformed" };
+      labs = { notes: labsRaw };
     }
   }
 

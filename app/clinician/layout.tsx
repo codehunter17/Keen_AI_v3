@@ -10,6 +10,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getClinician } from "@/lib/clinician-auth";
+import { ClinicianNav } from "./clinician-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function ClinicianLayout({
           </form>
         </div>
       </header>
+      <ClinicianNav />
       <main className="max-w-5xl mx-auto px-6 py-10">{children}</main>
       <footer className="max-w-5xl mx-auto px-6 py-6 text-xs text-muted-foreground">
         Anonymized cases only. Never include patient names, phone numbers, or

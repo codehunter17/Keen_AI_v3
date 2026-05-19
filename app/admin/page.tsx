@@ -6,6 +6,7 @@
  */
 
 import { nutrimamaHost } from "@/keen";
+import { CronPanel } from "./cron-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,8 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-12">
+      <CronPanel />
+
       <section>
         <div className="flex items-baseline justify-between mb-4">
           <h1 className="text-2xl font-heading font-bold">Recent observations</h1>
