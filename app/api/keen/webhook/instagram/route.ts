@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       };
       await prisma.appContentFeed.update({
         where: { id: feed.id },
-        data: { metrics: merged },
+        data: { metrics: merged as object },
       });
     }
   }

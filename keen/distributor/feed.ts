@@ -62,6 +62,6 @@ export async function updateMetrics(
 ) {
   return prisma.appContentFeed.update({
     where: { id: feedId },
-    data: { metrics },
+    data: { metrics: metrics as object },
   });
 }

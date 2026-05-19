@@ -170,7 +170,7 @@ export async function runInSandbox(input: SandboxRunInput): Promise<SandboxRunRe
           exitCode: cmd.exitCode,
           stderrTail,
           artifactUrl,
-          metricsJson: metrics ?? undefined,
+          metricsJson: metrics ? (metrics as object) : undefined,
         },
       });
 

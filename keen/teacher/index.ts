@@ -39,7 +39,7 @@ export async function ingestCase(input: Omit<ClinicalCase, "id">) {
       teacherId: input.teacherId,
       occurredAt: input.occurredAt,
       inputs: input.inputs as object,
-      differential: (input.differential as unknown) ?? null,
+      differential: input.differential ? (input.differential as unknown[] as object) : undefined,
       decision: input.decision as object,
       reasoning: input.reasoning ?? null,
     },
