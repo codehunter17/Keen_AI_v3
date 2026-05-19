@@ -59,9 +59,12 @@ export async function recordEvent(event: TelemetryEvent): Promise<void> {
     const redis = getRedis();
     await redis.xadd(
       STREAM_KEY,
-      { nomkstream: false, trim: { type: "MAXLEN", threshold: STREAM_MAXLEN, comparison: "~" } },
       "*",
       { event: JSON.stringify({ ...event, ts: Date.now() }) },
+      {
+        nomkStream: false,
+        trim: { type: "MAXLEN", threshold: STREAM_MAXLEN, comparison: "~" },
+      },
     );
   } catch {
     // never let telemetry crash a request

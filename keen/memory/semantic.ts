@@ -33,7 +33,7 @@ export interface SaveSemanticInput {
 export async function saveSemanticMemory(input: SaveSemanticInput): Promise<{ id: string }> {
   const vec =
     input.vector ?? (await embed(input.summary).then((r) => r.vector));
-  const literal = toPgVectorLiteral(vec);
+  const literal = toPgVectorLiteral(vec as number[]);
 
   const rows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     INSERT INTO keen_semantic_memory

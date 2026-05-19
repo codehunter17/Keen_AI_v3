@@ -72,7 +72,7 @@ export async function fineTune(input: FineTuneInput): Promise<FineTuneResult> {
         sandboxRunId: run.runId,
         artifactUrl: run.artifactUrl,
         durationMs: run.durationMs,
-        metrics: run.metrics ?? null,
+        metrics: run.metrics ? (run.metrics as object) : null,
         exitCode: run.exitCode,
       },
     },

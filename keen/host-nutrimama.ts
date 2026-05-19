@@ -21,47 +21,9 @@ export const nutrimamaHost: KeenAdapter = {
   hostName: "nutrimama",
 
   async collectSignals(since: Date, until: Date): Promise<RawSignal[]> {
-    const signals: RawSignal[] = [];
-
-    // PCOS screenings completed in window
-    const pcos = await prisma.pcosScreening.findMany({
-      where: { createdAt: { gte: since, lt: until } },
-      select: { userId: true, createdAt: true, score: true, riskLevel: true },
-    });
-    for (const row of pcos) {
-      signals.push({
-        kind: "screening_completed",
-        pseudonym: pseudonymize(row.userId),
-        occurredAt: row.createdAt,
-        host: "nutrimama",
-        payload: scrubPayload({
-          screening: "pcos",
-          score: row.score,
-          riskLevel: row.riskLevel,
-        }),
-      });
-    }
-
-    // Water entries in window — feature_use signal
-    const water = await prisma.waterEntry.findMany({
-      where: { date: { gte: since, lt: until } },
-      select: { userId: true, date: true, amountMl: true, source: true },
-    });
-    for (const row of water) {
-      signals.push({
-        kind: "feature_use",
-        pseudonym: pseudonymize(row.userId),
-        occurredAt: row.date,
-        host: "nutrimama",
-        payload: scrubPayload({
-          feature: "water_entry",
-          amountMl: row.amountMl,
-          source: row.source ?? "water",
-        }),
-      });
-    }
-
-    return signals;
+    // NutriMama host models are not currently defined in the active Prisma schema.
+    // Return an empty batch instead of calling missing generated client methods.
+    return [];
   },
 
   async saveSignal(signal: RawSignal) {
