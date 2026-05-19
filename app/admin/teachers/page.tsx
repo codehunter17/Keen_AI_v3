@@ -1,10 +1,15 @@
-import { listTeachers } from "@/keen";
+import { prisma } from "@/lib/prisma";
 import { AddTeacherForm } from "./add-teacher-form";
+import { TeacherRow } from "./teacher-row";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeachersPage() {
-  const teachers = await listTeachers();
+  const teachers = await prisma.keenTeacher.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { cases: true } } },
+  });
+
   return (
     <div className="space-y-10">
       <div>
@@ -33,20 +38,19 @@ export default async function TeachersPage() {
         ) : (
           <ul className="space-y-2">
             {teachers.map((t) => (
-              <li
+              <TeacherRow
                 key={t.id}
-                className="border border-border rounded-2xl p-4 bg-card flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-semibold">{t.displayName}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t.specialty}
-                  </div>
-                </div>
-                <span className="text-xs font-mono">
-                  trust × {t.trustWeight.toFixed(2)}
-                </span>
-              </li>
+                teacher={{
+                  id: t.id,
+                  displayName: t.displayName,
+                  specialty: t.specialty,
+                  trustWeight: t.trustWeight,
+                  caseCount: t._count.cases,
+                  revoked: t.revoked,
+                  invitedAt: t.invitedAt?.toISOString() ?? null,
+                  lastSeenAt: t.lastSeenAt?.toISOString() ?? null,
+                }}
+              />
             ))}
           </ul>
         )}

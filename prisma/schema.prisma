@@ -653,7 +653,11 @@ model KeenTeacher {
   specialty   String
   kind        String   @default("clinician") // "clinician" | "synthetic-body" | "literature"
   trustWeight Float    @default(1.0)
-  createdAt   DateTime @default(now())
+  // Clinician portal access
+  revoked     Boolean   @default(false)
+  invitedAt   DateTime?
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
 
   cases       KeenClinicalCase[]
 
